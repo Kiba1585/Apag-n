@@ -8,14 +8,15 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.MenuBook
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.tuapp.corriente.ui.LeyendaScreen
 import com.tuapp.corriente.ui.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -26,35 +27,45 @@ class MainActivity : ComponentActivity() {
         setContent {
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    HomeScreen(vm)
+                    AppRoot(vm)
                 }
             }
         }
     }
 }
 
+@Composable
+fun AppRoot(vm: MainViewModel) {
+    var pantalla by remember { mutableStateOf("inicio") }
+    val circuitos by vm.circuitos.collectAsStateWithLifecycle()
+
+    when (pantalla) {
+        "inicio" -> InicioScreen(circuitos, onLeyenda = { pantalla = "leyenda" })
+        "leyenda" -> LeyendaScreen(circuitos, onVolver = { pantalla = "inicio" })
+    }
+}
+
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun HomeScreen(vm: MainViewModel) {
-    val zonas by vm.zonas.collectAsStateWithLifecycle()
-    var mostrarDialogo by remember { mutableStateOf(false) }
-
+fun InicioScreen(
+    circuitos: List<com.tuapp.corriente.data.entity.Circuito>,
+    onLeyenda: () -> Unit
+) {
     Scaffold(
         topBar = {
-            TopAppBar(title = { Text("⚡ Zonas") })
-        },
-        floatingActionButton = {
-            FloatingActionButton(onClick = { mostrarDialogo = true }) {
-                Icon(Icons.Default.Add, contentDescription = "Añadir zona")
-            }
+            TopAppBar(
+                title = { Text("⚡ Circuitos") },
+                actions = {
+                    IconButton(onClick = onLeyenda) {
+                        Icon(Icons.Default.MenuBook, contentDescription = "Leyenda")
+                    }
+                }
+            )
         }
     ) { padding ->
-        if (zonas.isEmpty()) {
-            Box(
-                Modifier.fillMaxSize().padding(padding),
-                contentAlignment = Alignment.Center
-            ) {
-                Text("Sin zonas. Toca + para añadir una.")
+        if (circuitos.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), Alignment.Center) {
+                Text("Cargando circuitos...")
             }
         } else {
             LazyColumn(
@@ -62,48 +73,21 @@ fun HomeScreen(vm: MainViewModel) {
                 contentPadding = PaddingValues(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ) {
-                items(zonas, key = { it.id }) { zona ->
+                items(circuitos, key = { it.codigo }) { c ->
                     Card(Modifier.fillMaxWidth()) {
-                        Row(
-                            Modifier.fillMaxWidth().padding(16.dp),
-                            verticalAlignment = Alignment.CenterVertically
-                        ) {
-                            Text(zona.nombre, modifier = Modifier.weight(1f))
-                            IconButton(onClick = { vm.eliminarZona(zona) }) {
-                                Icon(Icons.Default.Delete, contentDescription = "Eliminar")
+                        Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(12.dp).background(Color(c.color)))
+                            Spacer(Modifier.width(12.dp))
+                            Column {
+                                Text("${c.codigo} · ${c.nombre}",
+                                    style = MaterialTheme.typography.titleSmall)
+                                Text(c.zona,
+                                    style = MaterialTheme.typography.labelSmall)
                             }
                         }
                     }
                 }
             }
         }
-    }
-
-    if (mostrarDialogo) {
-        var nombre by remember { mutableStateOf("") }
-        AlertDialog(
-            onDismissRequest = { mostrarDialogo = false },
-            title = { Text("Nueva zona") },
-            text = {
-                OutlinedTextField(
-                    value = nombre,
-                    onValueChange = { nombre = it },
-                    label = { Text("Nombre") },
-                    singleLine = true
-                )
-            },
-            confirmButton = {
-                TextButton(
-                    enabled = nombre.isNotBlank(),
-                    onClick = {
-                        vm.agregarZona(nombre.trim())
-                        mostrarDialogo = false
-                    }
-                ) { Text("Guardar") }
-            },
-            dismissButton = {
-                TextButton(onClick = { mostrarDialogo = false }) { Text("Cancelar") }
-            }
-        )
     }
 }
