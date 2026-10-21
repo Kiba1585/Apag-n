@@ -4,8 +4,8 @@ import android.app.Application
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.tuapp.corriente.CorrienteApp
+import com.tuapp.corriente.data.DatosBloques
 import com.tuapp.corriente.data.DatosIniciales
-import com.tuapp.corriente.data.entity.BloqueServicio
 import com.tuapp.corriente.data.entity.Circuito
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
@@ -23,6 +23,7 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
         viewModelScope.launch {
             if (circuitoDao.contar() == 0) {
                 circuitoDao.insertarVarios(DatosIniciales.circuitos)
+                bloqueDao.insertarVarios(DatosBloques.generarBloques())
             }
         }
     }
