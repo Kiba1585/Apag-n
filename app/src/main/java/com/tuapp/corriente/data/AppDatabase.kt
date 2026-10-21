@@ -5,29 +5,23 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.tuapp.corriente.data.dao.AlarmaDao
-import com.tuapp.corriente.data.dao.BloqueHorarioDao
-import com.tuapp.corriente.data.dao.RegistroHistoricoDao
-import com.tuapp.corriente.data.dao.ZonaDao
-import com.tuapp.corriente.data.entity.Alarma
-import com.tuapp.corriente.data.entity.BloqueHorario
-import com.tuapp.corriente.data.entity.RegistroHistorico
-import com.tuapp.corriente.data.entity.Zona
+import com.tuapp.corriente.data.dao.*
+import com.tuapp.corriente.data.entity.*
 
 @Database(
     entities = [
-        Zona::class,
-        BloqueHorario::class,
+        Circuito::class,
+        BloqueServicio::class,
         Alarma::class,
         RegistroHistorico::class
     ],
-    version = 1,
+    version = 2,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
-    abstract fun zonaDao(): ZonaDao
-    abstract fun bloqueHorarioDao(): BloqueHorarioDao
+    abstract fun circuitoDao(): CircuitoDao
+    abstract fun bloqueServicioDao(): BloqueServicioDao
     abstract fun alarmaDao(): AlarmaDao
     abstract fun registroHistoricoDao(): RegistroHistoricoDao
 
@@ -40,7 +34,10 @@ abstract class AppDatabase : RoomDatabase() {
                     context.applicationContext,
                     AppDatabase::class.java,
                     "corriente.db"
-                ).build().also { INSTANCE = it }
+                )
+                    .fallbackToDestructiveMigration()
+                    .build()
+                    .also { INSTANCE = it }
             }
         }
     }
