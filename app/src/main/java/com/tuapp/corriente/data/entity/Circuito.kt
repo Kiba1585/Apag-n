@@ -5,10 +5,12 @@ import androidx.room.PrimaryKey
 
 @Entity(tableName = "circuitos")
 data class Circuito(
-    @PrimaryKey val codigo: String,       // "A060"
-    val nombre: String,                    // "Nueva Gerona Centro"
-    val zona: String,                      // "Nueva Gerona", "Santa Fe", ...
-    val descripcion: String,               // límites de calles
-    val color: Int,                        // ARGB
-    val activo: Boolean = true
+    @PrimaryKey val codigo: String,
+    val nombre: String,
+    val zona: String,
+    val descripcion: String,
+    val color: Int,
+    val activo: Boolean = true,
+    val servicioCritico: Boolean = false,
+    val tipoServicio: String = ""   // "hospital", "bombeo", "escuela", ""
 )
