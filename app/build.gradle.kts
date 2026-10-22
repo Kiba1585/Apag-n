@@ -16,29 +16,16 @@ android {
         versionName = "0.1.0"
     }
 
-    // Configuración de firma para que release también genere un APK instalable
-    signingConfigs {
-        getByName("debug") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-        create("release") {
-            storeFile = file("${System.getProperty("user.home")}/.android/debug.keystore")
-            storePassword = "android"
-            keyAlias = "androiddebugkey"
-            keyPassword = "android"
-        }
-    }
+    // ❌ ELIMINADO: signingConfigs (Gradle genera el debug.keystore automáticamente)
 
     buildTypes {
         debug {
-            signingConfig = signingConfigs.getByName("debug")
+            // Gradle firma automáticamente con la clave por defecto
         }
         release {
             isMinifyEnabled = false
-            signingConfig = signingConfigs.getByName("release")
+            // Usamos la firma de debug para que el APK release también sea instalable
+            signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
                 "proguard-rules.pro"
