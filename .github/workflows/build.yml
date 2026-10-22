@@ -11,6 +11,11 @@ on:
         options:
           - debug
           - release
+          - ambos
+
+permissions:
+  actions: write      # necesario para borrar artifacts
+  contents: read
 
 jobs:
   build:
@@ -30,26 +35,47 @@ jobs:
         with:
           gradle-version: '8.7'
 
+      # ---------- BORRAR ARTIFACTS ANTERIORES ----------
+      - name: Borrar artifact debug anterior
+        if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
+        uses: actions/delete-artifact@v5
+        continue-on-error: true
+        with:
+          name: corriente-debug-apk
+          failOnError: false
+
+      - name: Borrar artifact release anterior
+        if: ${{ inputs.build_type == 'release' || inputs.build_type == 'ambos' }}
+        uses: actions/delete-artifact@v5
+        continue-on-error: true
+        with:
+          name: corriente-release-apk
+          failOnError: false
+
+      # ---------- BUILDS ----------
       - name: Build Debug APK
-        if: ${{ inputs.build_type == 'debug' }}
+        if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
         run: gradle assembleDebug --no-daemon
 
       - name: Build Release APK
-        if: ${{ inputs.build_type == 'release' }}
+        if: ${{ inputs.build_type == 'release' || inputs.build_type == 'ambos' }}
         run: gradle assembleRelease --no-daemon
 
+      # ---------- SUBIR NUEVOS ----------
       - name: Upload APK (Debug)
-        if: ${{ inputs.build_type == 'debug' }}
+        if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
         uses: actions/upload-artifact@v4
         with:
           name: corriente-debug-apk
           path: app/build/outputs/apk/debug/app-debug.apk
-          retention-days: 30
+          retention-days: 7
+          overwrite: true
 
       - name: Upload APK (Release)
-        if: ${{ inputs.build_type == 'release' }}
+        if: ${{ inputs.build_type == 'release' || inputs.build_type == 'ambos' }}
         uses: actions/upload-artifact@v4
         with:
           name: corriente-release-apk
           path: app/build/outputs/apk/release/app-release-unsigned.apk
-          retention-days: 30
+          retention-days: 7
+          overwrite: true
