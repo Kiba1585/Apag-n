@@ -38,7 +38,7 @@ jobs:
       # ---------- BORRAR ARTIFACTS ANTERIORES ----------
       - name: Borrar artifact debug anterior
         if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
-        uses: actions/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v5
         continue-on-error: true
         with:
           name: corriente-debug-apk
@@ -46,7 +46,7 @@ jobs:
 
       - name: Borrar artifact release anterior
         if: ${{ inputs.build_type == 'release' || inputs.build_type == 'ambos' }}
-        uses: actions/delete-artifact@v5
+        uses: geekyeggo/delete-artifact@v5
         continue-on-error: true
         with:
           name: corriente-release-apk
