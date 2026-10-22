@@ -5,8 +5,14 @@ import androidx.room.Database
 import androidx.room.Room
 import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
-import com.tuapp.corriente.data.dao.*
-import com.tuapp.corriente.data.entity.*
+import com.tuapp.corriente.data.dao.AlarmaDao
+import com.tuapp.corriente.data.dao.BloqueServicioDao
+import com.tuapp.corriente.data.dao.CircuitoDao
+import com.tuapp.corriente.data.dao.RegistroHistoricoDao
+import com.tuapp.corriente.data.entity.Alarma
+import com.tuapp.corriente.data.entity.BloqueServicio
+import com.tuapp.corriente.data.entity.Circuito
+import com.tuapp.corriente.data.entity.RegistroHistorico
 
 @Database(
     entities = [
@@ -15,9 +21,8 @@ import com.tuapp.corriente.data.entity.*
         Alarma::class,
         RegistroHistorico::class
     ],
-    version = 4,       
+    version = 4,
     exportSchema = false
-)
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
