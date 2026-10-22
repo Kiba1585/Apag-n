@@ -9,17 +9,17 @@ import androidx.room.PrimaryKey
     tableName = "alarmas",
     foreignKeys = [
         ForeignKey(
-            entity = Zona::class,
-            parentColumns = ["id"],
-            childColumns = ["zonaId"],
+            entity = Circuito::class,
+            parentColumns = ["codigo"],
+            childColumns = ["circuitoCodigo"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("zonaId")]
+    indices = [Index("circuitoCodigo")]
 )
 data class Alarma(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val zonaId: Long,
+    val circuitoCodigo: String,
     val bloqueId: Long?,            // null = alarma genérica
     val minutosAntes: Int,          // 15, 30, 60
     val tono: String = "default",
