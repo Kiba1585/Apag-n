@@ -20,10 +20,10 @@ import androidx.room.PrimaryKey
 data class Alarma(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val circuitoCodigo: String,
-    val bloqueId: Long?,            // null = alarma genérica
-    val minutosAntes: Int,          // 15, 30, 60
+    val bloqueId: Long? = null,
+    val minutosAntes: Int = 15,
     val tono: String = "default",
     val vibrar: Boolean = true,
-    val volumen: Int = 80,          // 0-100
+    val volumen: Int = 80,
     val activa: Boolean = true
 )
