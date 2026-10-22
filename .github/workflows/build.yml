@@ -14,7 +14,7 @@ on:
           - ambos
 
 permissions:
-  actions: write      # necesario para borrar artifacts
+  actions: write
   contents: read
 
 jobs:
@@ -35,7 +35,6 @@ jobs:
         with:
           gradle-version: '8.7'
 
-      # ---------- BORRAR ARTIFACTS ANTERIORES ----------
       - name: Borrar artifact debug anterior
         if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
         uses: geekyeggo/delete-artifact@v5
@@ -52,7 +51,6 @@ jobs:
           name: corriente-release-apk
           failOnError: false
 
-      # ---------- BUILDS ----------
       - name: Build Debug APK
         if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
         run: gradle assembleDebug --no-daemon
@@ -61,7 +59,6 @@ jobs:
         if: ${{ inputs.build_type == 'release' || inputs.build_type == 'ambos' }}
         run: gradle assembleRelease --no-daemon
 
-      # ---------- SUBIR NUEVOS ----------
       - name: Upload APK (Debug)
         if: ${{ inputs.build_type == 'debug' || inputs.build_type == 'ambos' }}
         uses: actions/upload-artifact@v4
@@ -76,6 +73,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: corriente-release-apk
-          path: app/build/outputs/apk/release/app-release-unsigned.apk
+          # AQUI ESTÁ LA CORRECCIÓN: ahora apunta al firmado, no al -unsigned
+          path: app/build/outputs/apk/release/app-release.apk
           retention-days: 7
           overwrite: true
