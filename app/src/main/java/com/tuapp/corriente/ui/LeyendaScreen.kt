@@ -14,11 +14,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
+import com.tuapp.corriente.data.entity.Circuito
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun LeyendaScreen(
-    circuitos: List<com.tuapp.corriente.data.entity.Circuito>,
+    circuitos: List<Circuito>,
     onVolver: () -> Unit
 ) {
     Scaffold(
@@ -58,6 +59,14 @@ fun LeyendaScreen(
                                 style = MaterialTheme.typography.labelMedium,
                                 color = MaterialTheme.colorScheme.primary
                             )
+                            if (c.prioridadMaxima) {
+                                Spacer(Modifier.height(4.dp))
+                                Text(
+                                    "🏥 Prioridad máxima – Hospital",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.error
+                                )
+                            }
                             Spacer(Modifier.height(6.dp))
                             Text(
                                 c.descripcion,
