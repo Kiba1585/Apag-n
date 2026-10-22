@@ -15,8 +15,9 @@ import com.tuapp.corriente.data.entity.*
         Alarma::class,
         RegistroHistorico::class
     ],
-    version = 2,
+    version = 3,           // ← era 2, ahora 3
     exportSchema = false
+)
 )
 @TypeConverters(Converters::class)
 abstract class AppDatabase : RoomDatabase() {
