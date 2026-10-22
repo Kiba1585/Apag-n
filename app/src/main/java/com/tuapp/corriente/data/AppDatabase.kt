@@ -21,7 +21,7 @@ import com.tuapp.corriente.data.entity.RegistroHistorico
         Alarma::class,
         RegistroHistorico::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
