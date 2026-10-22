@@ -12,12 +12,10 @@ data class Circuito(
     val color: Int,
     val activo: Boolean = true,
 
-    // Servicios críticos que dependen del circuito
     val tieneSalud: Boolean = false,
     val tieneBombeo: Boolean = false,
     val tieneEducacion: Boolean = false,
     val tieneTelecom: Boolean = false,
 
-    // Prioridad máxima (solo A080 - Hospital Héroes del Baire)
     val prioridadMaxima: Boolean = false
 )
