@@ -15,7 +15,7 @@ import com.tuapp.corriente.data.entity.*
         Alarma::class,
         RegistroHistorico::class
     ],
-    version = 3,           // ← era 2, ahora 3
+    version = 4,       
     exportSchema = false
 )
 )
