@@ -10,17 +10,17 @@ import java.time.Instant
     tableName = "historial",
     foreignKeys = [
         ForeignKey(
-            entity = Zona::class,
-            parentColumns = ["id"],
-            childColumns = ["zonaId"],
+            entity = Circuito::class,
+            parentColumns = ["codigo"],
+            childColumns = ["circuitoCodigo"],
             onDelete = ForeignKey.CASCADE
         )
     ],
-    indices = [Index("zonaId")]
+    indices = [Index("circuitoCodigo")]
 )
 data class RegistroHistorico(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
-    val zonaId: Long,
+    val circuitoCodigo: String,
     val inicio: Instant,
     val fin: Instant?,
     val tipo: String                // "corte" | "corriente"
