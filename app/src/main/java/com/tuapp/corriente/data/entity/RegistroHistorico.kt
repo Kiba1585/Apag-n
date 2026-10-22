@@ -22,6 +22,6 @@ data class RegistroHistorico(
     @PrimaryKey(autoGenerate = true) val id: Long = 0,
     val circuitoCodigo: String,
     val inicio: Instant,
-    val fin: Instant?,
-    val tipo: String                // "corte" | "corriente"
+    val fin: Instant? = null,
+    val tipo: String
 )
