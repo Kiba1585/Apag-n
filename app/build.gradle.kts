@@ -16,15 +16,13 @@ android {
         versionName = "0.1.0"
     }
 
-    // ❌ ELIMINADO: signingConfigs (Gradle genera el debug.keystore automáticamente)
-
     buildTypes {
         debug {
-            // Gradle firma automáticamente con la clave por defecto
+            // Firma automática con debug.keystore
         }
         release {
             isMinifyEnabled = false
-            // Usamos la firma de debug para que el APK release también sea instalable
+            // Forzamos a que use la firma de debug para que sea instalable
             signingConfig = signingConfigs.getByName("debug")
             proguardFiles(
                 getDefaultProguardFile("proguard-android-optimize.txt"),
