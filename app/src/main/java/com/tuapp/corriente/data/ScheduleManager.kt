@@ -43,4 +43,13 @@ class ScheduleManager(context: Context) {
             null
         }
     }
+
+    // NUEVAS FUNCIONES PARA EL WIDGET
+    fun guardarCircuitoFavorito(codigo: String) {
+        prefs.edit().putString("circuito_favorito", codigo).apply()
+    }
+
+    fun obtenerCircuitoFavorito(): String? {
+        return prefs.getString("circuito_favorito", null)
+    }
 }
