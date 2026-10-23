@@ -57,6 +57,7 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         
+        // Pedir permiso para notificaciones en Android 13+
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
                 requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
@@ -79,6 +80,7 @@ fun PantallaEnVivo() {
     val context = LocalContext.current
     val scheduleManager = remember { ScheduleManager(context) }
     
+    // Estados principales
     var circuitos by remember { mutableStateOf(scheduleManager.cargarCircuitos() ?: DatosIniciales.circuitos) }
     var todosLosBloques by remember { mutableStateOf(scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()) }
     var favorito by remember { mutableStateOf(scheduleManager.obtenerCircuitoFavorito() ?: "A060") }
@@ -86,10 +88,12 @@ fun PantallaEnVivo() {
     
     val bloquesPorCircuito = remember(todosLosBloques) { todosLosBloques.groupBy { it.circuitoCodigo } }
     var ahora by remember { mutableStateOf(LocalTime.now()) }
-    var circuitoAEditar by remember { mutableStateOf<Circuito?>(null) }
     
+    // Estados para los diálogos
+    var circuitoAEditar by remember { mutableStateOf<Circuito?>(null) }
     var mostrarDialogoAgregar by remember { mutableStateOf(false) }
 
+    // Reloj interno que actualiza la pantalla cada minuto
     LaunchedEffect(Unit) {
         while (true) {
             ahora = LocalTime.now()
@@ -97,6 +101,8 @@ fun PantallaEnVivo() {
         }
     }
 
+    // Lógica de ordenación: Primero los que tienen luz (y se van a apagar pronto),
+    // luego los que no tienen luz (y vuelven pronto).
     val circuitosOrdenados = circuitos.map { c ->
         val bloques = bloquesPorCircuito[c.codigo] ?: emptyList()
         val estado = HorarioCalculator.calcular(bloques, ahora)
@@ -138,10 +144,11 @@ fun PantallaEnVivo() {
             ) {
                 items(circuitosOrdenados, key = { it.first.codigo }) { (c, estado) ->
                     
+                    // Colores según el estado
                     val colorEstado = when {
-                        estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> Color(0xFFFFC107)
-                        estado.tieneCorriente -> Color(0xFF4CAF50)
-                        else -> Color(0xFFF44336)
+                        estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> Color(0xFFFFC107) // Amarillo
+                        estado.tieneCorriente -> Color(0xFF4CAF50) // Verde
+                        else -> Color(0xFFF44336) // Rojo
                     }
                     
                     val horas = estado.minutosHastaCambio / 60
@@ -153,6 +160,7 @@ fun PantallaEnVivo() {
                         else -> "Sin corriente (vuelve en $tiempoTexto)"
                     }
 
+                    // ¿La alarma está activa?
                     val alarmaActivada = alarmasActivas.contains(c.codigo)
 
                     Card(
@@ -168,6 +176,7 @@ fun PantallaEnVivo() {
                                 Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
                             }
                             
+                            // Botón Alarma (Campana)
                             IconButton(onClick = {
                                 if (alarmaActivada) {
                                     AlarmaScheduler.cancelarAlarma(context, c.codigo)
@@ -184,10 +193,11 @@ fun PantallaEnVivo() {
                                 Icon(
                                     imageVector = Icons.Default.Notifications,
                                     contentDescription = "Alarma",
-                                    tint = if (alarmaActivada) Color(0xFF2196F3) else Color.Gray
+                                    tint = if (alarmaActivada) Color(0xFF2196F3) else Color.Gray // Azul si está activa
                                 )
                             }
 
+                            // Botón Favorito (Estrella)
                             IconButton(onClick = {
                                 favorito = c.codigo
                                 scheduleManager.guardarCircuitoFavorito(c.codigo)
@@ -201,10 +211,12 @@ fun PantallaEnVivo() {
                                 Icon(Icons.Default.Star, contentDescription = "Favorito", tint = if (favorito == c.codigo) Color(0xFFFFC107) else Color.Gray)
                             }
 
+                            // Botón Editar
                             IconButton(onClick = { circuitoAEditar = c }) {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                             }
                             
+                            // Botón Eliminar
                             IconButton(onClick = {
                                 val nuevaLista = circuitos.filter { it.codigo != c.codigo }
                                 circuitos = nuevaLista
@@ -219,8 +231,8 @@ fun PantallaEnVivo() {
         }
     }
 
+    // Diálogo para añadir circuitos
     if (mostrarDialogoAgregar) {
-        // NUEVO DIÁLOGO: Selector de circuitos predefinidos
         SeleccionarCircuitoDialog(
             circuitosActuales = circuitos,
             onDismiss = { mostrarDialogoAgregar = false },
@@ -233,6 +245,7 @@ fun PantallaEnVivo() {
         )
     }
 
+    // Diálogo para editar horarios
     if (circuitoAEditar != null) {
         EditarHorarioDialog(
             circuito = circuitoAEditar!!,
@@ -249,8 +262,7 @@ fun PantallaEnVivo() {
     }
 }
 
-// --- NUEVOS DIÁLOGOS PARA AÑADIR CIRCUITOS ---
-
+// --- DIÁLOGO PARA SELECCIONAR CIRCUITOS PREDEFINIDOS ---
 @Composable
 fun SeleccionarCircuitoDialog(
     circuitosActuales: List<Circuito>,
@@ -259,7 +271,7 @@ fun SeleccionarCircuitoDialog(
 ) {
     var mostrarCreacionManual by remember { mutableStateOf(false) }
     
-    // Filtramos los circuitos que ya están en pantalla para no repetirlos
+    // Filtramos los circuitos que ya están en la pantalla
     val disponibles = DatosIniciales.circuitos.filter { base -> 
         circuitosActuales.none { it.codigo == base.codigo } 
     }
@@ -320,6 +332,7 @@ fun SeleccionarCircuitoDialog(
     )
 }
 
+// --- DIÁLOGO PARA CREAR UN CIRCUITO DESDE CERO ---
 @Composable
 fun AgregarCircuitoManualDialog(
     onDismiss: () -> Unit,
@@ -370,7 +383,7 @@ fun AgregarCircuitoManualDialog(
     )
 }
 
-// (El resto de diálogos EditarHorarioDialog y GeneradorPlantillaDialog se mantienen igual)
+// --- DIÁLOGO PARA EDITAR HORARIOS ---
 @Composable
 fun EditarHorarioDialog(
     circuito: Circuito,
@@ -433,15 +446,4 @@ fun EditarHorarioDialog(
                                 val inicio = LocalTime.of(hIni, mIni)
                                 TimePickerDialog(context, { _, hFin, mFin ->
                                     val fin = LocalTime.of(hFin, mFin)
-                                    val nuevo = BloqueServicio(
-                                        id = System.currentTimeMillis(),
-                                        circuitoCodigo = circuito.codigo,
-                                        horaInicio = inicio,
-                                        horaFin = fin
-                                    )
-                                    listaEditada = listaEditada + nuevo
-                                }, inicio.plusHours(3).hour, inicio.plusHours(3).minute, true).show()
-                            }, 12, 0, true).show()
-                        },
-                        modifier = Modifier.weight(1f)
      
