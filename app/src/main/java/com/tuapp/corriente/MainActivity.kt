@@ -1,6 +1,9 @@
 package com.tuapp.corriente
 
 import android.app.TimePickerDialog
+import android.appwidget.AppWidgetManager
+import android.content.ComponentName
+import android.content.Intent
 import android.os.Bundle
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
@@ -15,6 +18,8 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -53,9 +58,8 @@ fun PantallaEnVivo() {
     val scheduleManager = remember { ScheduleManager(context) }
     val circuitos = remember { DatosIniciales.circuitos }
     
-    var todosLosBloques by remember { 
-        mutableStateOf(scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()) 
-    }
+    var todosLosBloques by remember { mutableStateOf(scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()) }
+    var favorito by remember { mutableStateOf(scheduleManager.obtenerCircuitoFavorito() ?: "A060") }
     
     val bloquesPorCircuito = remember(todosLosBloques) { todosLosBloques.groupBy { it.circuitoCodigo } }
     var ahora by remember { mutableStateOf(LocalTime.now()) }
@@ -100,7 +104,7 @@ fun PantallaEnVivo() {
                     colors = CardDefaults.cardColors(containerColor = colorEstado.copy(alpha = 0.1f)),
                     shape = RoundedCornerShape(8.dp)
                 ) {
-                    Row(Modifier.padding(16.dp), verticalAlignment = Alignment.CenterVertically) {
+                    Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
                         Box(Modifier.size(14.dp).clip(CircleShape).background(Color(c.color)))
                         Spacer(Modifier.width(12.dp))
                         Column(Modifier.weight(1f)) {
@@ -110,6 +114,25 @@ fun PantallaEnVivo() {
                             Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
                         }
                         
+                        // Botón de favorito (estrella)
+                        IconButton(onClick = {
+                            favorito = c.codigo
+                            scheduleManager.guardarCircuitoFavorito(c.codigo)
+                            // Forzar actualización del widget
+                            val intent = Intent(context, CorrienteWidget::class.java).apply {
+                                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                                val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))
+                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                            }
+                            context.sendBroadcast(intent)
+                        }) {
+                            Icon(
+                                imageVector = if (favorito == c.codigo) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                contentDescription = "Favorito",
+                                tint = if (favorito == c.codigo) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+
                         IconButton(onClick = { circuitoAEditar = c }) {
                             Icon(Icons.Default.Edit, contentDescription = "Editar horario", tint = MaterialTheme.colorScheme.primary)
                         }
@@ -137,6 +160,7 @@ fun PantallaEnVivo() {
     }
 }
 
+// ... (EL RESTO DEL CÓDIGO DEL DIÁLOGO DE EDICIÓN Y GENERADOR DE PLANTILLAS SE MANTIENE IGUAL QUE EN LA RESPUESTA ANTERIOR)
 @Composable
 fun EditarHorarioDialog(
     circuito: Circuito,
@@ -275,7 +299,6 @@ fun GeneradorPlantillaDialog(
                 val nuevosBloques = mutableListOf<BloqueServicio>()
                 
                 var inicioActual = horaInicio
-                // Generamos bloques hasta que el inicio pase de las 23:59
                 while (true) {
                     val fin = inicioActual.plusHours(duracion)
                     nuevosBloques.add(
@@ -287,12 +310,10 @@ fun GeneradorPlantillaDialog(
                         )
                     )
                     
-                    // El siguiente inicio es el fin actual + las horas de apagón
                     inicioActual = fin.plusHours(apagon)
                     
-                    // Si el siguiente bloque empieza al día siguiente o el mismo día pero más temprano, paramos
                     if (inicioActual.isBefore(horaInicio) || inicioActual == horaInicio) break
-                    if (nuevosBloques.size > 10) break // Seguro para no hacer bucle infinito
+                    if (nuevosBloques.size > 10) break
                 }
                 
                 onGenerar(nuevosBloques)
