@@ -53,7 +53,6 @@ class ScheduleManager(context: Context) {
         return prefs.getString("circuito_favorito", null)
     }
 
-    // NUEVAS FUNCIONES PARA GESTIONAR TUS CIRCUITOS
     fun guardarCircuitos(circuitos: List<Circuito>) {
         val jsonArray = JSONArray()
         for (c in circuitos) {
@@ -101,5 +100,22 @@ class ScheduleManager(context: Context) {
         } catch (e: Exception) {
             null
         }
+    }
+
+    // NUEVAS FUNCIONES PARA LAS ALARMAS
+    fun activarAlarma(codigo: String) {
+        val actuales = obtenerAlarmasActivas().toMutableSet()
+        actuales.add(codigo)
+        prefs.edit().putStringSet("alarmas_activas", actuales).apply()
+    }
+
+    fun desactivarAlarma(codigo: String) {
+        val actuales = obtenerAlarmasActivas().toMutableSet()
+        actuales.remove(codigo)
+        prefs.edit().putStringSet("alarmas_activas", actuales).apply()
+    }
+
+    fun obtenerAlarmasActivas(): Set<String> {
+        return prefs.getStringSet("alarmas_activas", emptySet()) ?: emptySet()
     }
 }
