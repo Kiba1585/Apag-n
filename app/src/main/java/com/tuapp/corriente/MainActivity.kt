@@ -18,7 +18,6 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.tuapp.corriente.data.entity.Circuito
 import com.tuapp.corriente.ui.MainViewModel
 
 class MainActivity : ComponentActivity() {
@@ -41,11 +40,11 @@ fun PantallaCircuito(vm: MainViewModel) {
     val circuitos by vm.circuitos.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Text("⚡ Circuitos (Room Real)", style = MaterialTheme.typography.headlineSmall)
+        Text("⚡ Circuitos (Memoria)", style = MaterialTheme.typography.headlineSmall)
         Spacer(Modifier.height(16.dp))
         
         if (circuitos.isEmpty()) {
-            Text("Cargando base de datos...", style = MaterialTheme.typography.bodyLarge)
+            Text("Cargando...", style = MaterialTheme.typography.bodyLarge)
         } else {
             LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 items(circuitos, key = { it.codigo }) { c ->
