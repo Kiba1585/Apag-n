@@ -20,11 +20,7 @@ import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.Add
-import androidx.compose.material.icons.filled.Delete
-import androidx.compose.material.icons.filled.Edit
-import androidx.compose.material.icons.filled.Notifications
-import androidx.compose.material.icons.filled.Star
+import androidx.compose.material.icons.filled.*
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -45,6 +41,7 @@ import com.tuapp.corriente.util.AlarmaScheduler
 import com.tuapp.corriente.util.HorarioCalculator
 import kotlinx.coroutines.delay
 import java.time.LocalTime
+import kotlin.random.Random
 
 class MainActivity : ComponentActivity() {
     
@@ -75,18 +72,22 @@ class MainActivity : ComponentActivity() {
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun PantallaEnVivo() {
     val context = LocalContext.current
     val scheduleManager = remember { ScheduleManager(context) }
-    val circuitos = remember { DatosIniciales.circuitos }
     
+    // Cargamos los circuitos guardados o los iniciales por defecto
+    var circuitos by remember { mutableStateOf(scheduleManager.cargarCircuitos() ?: DatosIniciales.circuitos) }
     var todosLosBloques by remember { mutableStateOf(scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()) }
     var favorito by remember { mutableStateOf(scheduleManager.obtenerCircuitoFavorito() ?: "A060") }
     
     val bloquesPorCircuito = remember(todosLosBloques) { todosLosBloques.groupBy { it.circuitoCodigo } }
     var ahora by remember { mutableStateOf(LocalTime.now()) }
     var circuitoAEditar by remember { mutableStateOf<Circuito?>(null) }
+    
+    var mostrarDialogoAgregar by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
         while (true) {
@@ -95,73 +96,127 @@ fun PantallaEnVivo() {
         }
     }
 
-    Column(Modifier.fillMaxSize().padding(16.dp)) {
-        Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
-            Text("⚡ Estado en Vivo", style = MaterialTheme.typography.headlineSmall)
-            Text("${ahora.hour.toString().padStart(2, '0')}:${ahora.minute.toString().padStart(2, '0')}", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, color = MaterialTheme.colorScheme.primary)
+    // LÓGICA DE ORDENACIÓN AUTOMÁTICA
+    // 1ro los que tienen corriente (verde), luego los que no (rojo).
+    // Dentro de cada grupo, ordenados por el que cambia más pronto.
+    val circuitosOrdenados = circuitos.map { c ->
+        val bloques = bloquesPorCircuito[c.codigo] ?: emptyList()
+        val estado = HorarioCalculator.calcular(bloques, ahora)
+        Pair(c, estado)
+    }.sortedWith(
+        compareByDescending<Pair<Circuito, HorarioCalculator.Estado>> { it.second.tieneCorriente }
+            .thenBy { it.second.minutosHastaCambio }
+    )
+
+    Scaffold(
+        topBar = {
+            TopAppBar(
+                title = { Text("⚡ Estado en Vivo") },
+                actions = {
+                    Text(
+                        "${ahora.hour.toString().padStart(2, '0')}:${ahora.minute.toString().padStart(2, '0')}",
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(end = 16.dp)
+                    )
+                }
+            )
+        },
+        floatingActionButton = {
+            FloatingActionButton(onClick = { mostrarDialogoAgregar = true }) {
+                Icon(Icons.Default.Add, contentDescription = "Añadir Circuito")
+            }
         }
-        Spacer(Modifier.height(16.dp))
-        
-        LazyColumn(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            items(circuitos, key = { it.codigo }) { c ->
-                val bloquesDeEsteCircuito = bloquesPorCircuito[c.codigo] ?: emptyList()
-                val estado = HorarioCalculator.calcular(bloquesDeEsteCircuito, ahora)
-                
-                val colorEstado = when {
-                    estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> Color(0xFFFFC107)
-                    estado.tieneCorriente -> Color(0xFF4CAF50)
-                    else -> Color(0xFFF44336)
-                }
-                
-                val horas = estado.minutosHastaCambio / 60
-                val mins = estado.minutosHastaCambio % 60
-                val tiempoTexto = if (horas > 0) "${horas}h ${mins}m" else "${mins}m"
-                val textoEstado = when {
-                    estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> "Corte en $tiempoTexto"
-                    estado.tieneCorriente -> "Con corriente (quedan $tiempoTexto)"
-                    else -> "Sin corriente (vuelve en $tiempoTexto)"
-                }
+    ) { padding ->
+        if (circuitosOrdenados.isEmpty()) {
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                Text("No tienes circuitos. Toca + para añadir uno.", style = MaterialTheme.typography.bodyLarge)
+            }
+        } else {
+            LazyColumn(
+                modifier = Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+                contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
+            ) {
+                items(circuitosOrdenados, key = { it.first.codigo }) { (c, estado) ->
+                    
+                    val colorEstado = when {
+                        estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> Color(0xFFFFC107)
+                        estado.tieneCorriente -> Color(0xFF4CAF50)
+                        else -> Color(0xFFF44336)
+                    }
+                    
+                    val horas = estado.minutosHastaCambio / 60
+                    val mins = estado.minutosHastaCambio % 60
+                    val tiempoTexto = if (horas > 0) "${horas}h ${mins}m" else "${mins}m"
+                    val textoEstado = when {
+                        estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> "Corte en $tiempoTexto"
+                        estado.tieneCorriente -> "Con corriente (quedan $tiempoTexto)"
+                        else -> "Sin corriente (vuelve en $tiempoTexto)"
+                    }
 
-                Card(
-                    Modifier.fillMaxWidth(),
-                    colors = CardDefaults.cardColors(containerColor = colorEstado.copy(alpha = 0.1f)),
-                    shape = RoundedCornerShape(8.dp)
-                ) {
-                    Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                        Box(Modifier.size(14.dp).clip(CircleShape).background(Color(c.color)))
-                        Spacer(Modifier.width(8.dp))
-                        Column(Modifier.weight(1f)) {
-                            Text("${c.codigo} · ${c.nombre}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                            Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
-                        }
-                        
-                        IconButton(onClick = {
-                            AlarmaScheduler.programarAlarma(context, bloquesDeEsteCircuito, c.codigo)
-                            Toast.makeText(context, "Alarma programada (15 min antes)", Toast.LENGTH_SHORT).show()
-                        }) {
-                            Icon(Icons.Default.Notifications, contentDescription = "Alarma", tint = Color.Gray)
-                        }
-
-                        IconButton(onClick = {
-                            favorito = c.codigo
-                            scheduleManager.guardarCircuitoFavorito(c.codigo)
-                            val intent = Intent(context, CorrienteWidget::class.java).apply {
-                                action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
-                                val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))
-                                putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(containerColor = colorEstado.copy(alpha = 0.1f)),
+                        shape = RoundedCornerShape(8.dp)
+                    ) {
+                        Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(14.dp).clip(CircleShape).background(Color(c.color)))
+                            Spacer(Modifier.width(8.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("${c.codigo} · ${c.nombre}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
                             }
-                            context.sendBroadcast(intent)
-                        }) {
-                            Icon(Icons.Default.Star, contentDescription = "Favorito", tint = if (favorito == c.codigo) Color(0xFFFFC107) else Color.Gray)
-                        }
+                            
+                            IconButton(onClick = {
+                                AlarmaScheduler.programarAlarma(context, bloquesPorCircuito[c.codigo] ?: emptyList(), c.codigo)
+                                Toast.makeText(context, "Alarma programada (15 min antes)", Toast.LENGTH_SHORT).show()
+                            }) {
+                                Icon(Icons.Default.Notifications, contentDescription = "Alarma", tint = Color.Gray)
+                            }
 
-                        IconButton(onClick = { circuitoAEditar = c }) {
-                            Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                            IconButton(onClick = {
+                                favorito = c.codigo
+                                scheduleManager.guardarCircuitoFavorito(c.codigo)
+                                val intent = Intent(context, CorrienteWidget::class.java).apply {
+                                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                                    val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))
+                                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                                }
+                                context.sendBroadcast(intent)
+                            }) {
+                                Icon(Icons.Default.Star, contentDescription = "Favorito", tint = if (favorito == c.codigo) Color(0xFFFFC107) else Color.Gray)
+                            }
+
+                            IconButton(onClick = { circuitoAEditar = c }) {
+                                Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
+                            }
+                            
+                            // BOTÓN PARA ELIMINAR CIRCUITO
+                            IconButton(onClick = {
+                                val nuevaLista = circuitos.filter { it.codigo != c.codigo }
+                                circuitos = nuevaLista
+                                scheduleManager.guardarCircuitos(nuevaLista)
+                            }) {
+                                Icon(Icons.Default.Delete, contentDescription = "Eliminar", tint = Color.Gray)
+                            }
                         }
                     }
                 }
             }
         }
+    }
+
+    if (mostrarDialogoAgregar) {
+        AgregarCircuitoDialog(
+            onDismiss = { mostrarDialogoAgregar = false },
+            onAdd = { nuevo ->
+                val nuevaLista = circuitos + nuevo
+                circuitos = nuevaLista
+                scheduleManager.guardarCircuitos(nuevaLista)
+                mostrarDialogoAgregar = false
+            }
+        )
     }
 
     if (circuitoAEditar != null) {
@@ -180,6 +235,57 @@ fun PantallaEnVivo() {
     }
 }
 
+@Composable
+fun AgregarCircuitoDialog(
+    onDismiss: () -> Unit,
+    onAdd: (Circuito) -> Unit
+) {
+    var codigo by remember { mutableStateOf("") }
+    var nombre by remember { mutableStateOf("") }
+    
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir Circuito") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                OutlinedTextField(
+                    value = codigo,
+                    onValueChange = { codigo = it },
+                    label = { Text("Código (ej. A999)") },
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = nombre,
+                    onValueChange = { nombre = it },
+                    label = { Text("Nombre (ej. Mi Casa)") },
+                    singleLine = true
+                )
+            }
+        },
+        confirmButton = {
+            TextButton(
+                enabled = codigo.isNotBlank() && nombre.isNotBlank(),
+                onClick = {
+                    val color = Random.nextInt(0xFF000000.toInt(), 0xFFFFFFFF.toInt())
+                    onAdd(
+                        Circuito(
+                            codigo = codigo.trim().uppercase(),
+                            nombre = nombre.trim(),
+                            zona = "Personalizado",
+                            descripcion = "Añadido por el usuario",
+                            color = color
+                        )
+                    )
+                }
+            ) { Text("Añadir") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+// (LOS DIÁLOGOS EditarHorarioDialog Y GeneradorPlantillaDialog SE MANTIENEN IGUAL)
 @Composable
 fun EditarHorarioDialog(
     circuito: Circuito,
