@@ -17,6 +17,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.tuapp.corriente.data.entity.Circuito
@@ -28,10 +29,26 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
+        
         setContent {
             MaterialTheme {
                 Surface(Modifier.fillMaxSize()) {
-                    AppRoot(vm)
+                    try {
+                        AppRoot(vm)
+                    } catch (e: Throwable) {
+                        // Si la app falla, mostramos el error en pantalla en vez de cerrar
+                        Box(
+                            modifier = Modifier.fillMaxSize().background(Color.Red.copy(alpha = 0.1f)),
+                            contentAlignment = Alignment.Center
+                        ) {
+                            Text(
+                                text = "Error crítico:\n\n${e.message}\n\n${e.stackTraceToString().take(500)}",
+                                color = Color.Red,
+                                textAlign = TextAlign.Center,
+                                modifier = Modifier.padding(16.dp)
+                            )
+                        }
+                    }
                 }
             }
         }
