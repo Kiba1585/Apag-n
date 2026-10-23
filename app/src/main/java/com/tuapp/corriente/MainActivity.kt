@@ -6,6 +6,8 @@ import android.widget.LinearLayout
 import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
+import androidx.lifecycle.lifecycleScope
+import kotlinx.coroutines.launch
 import java.io.File
 
 class MainActivity : ComponentActivity() {
@@ -44,7 +46,7 @@ class MainActivity : ComponentActivity() {
             setContentView(layout)
             
         } else {
-            // SI NO HAY ERRORES, INICIA LA APP NORMALMENTE (Prueba de BD)
+            // SI NO HAY ERRORES, INICIA LA PRUEBA
             val tv = TextView(this)
             tv.text = "Iniciando prueba...\n\n"
             tv.textSize = 16f
@@ -58,21 +60,18 @@ class MainActivity : ComponentActivity() {
                 tv.append("Base de datos instanciada.\n")
                 tv.append("Probando lectura...\n\n")
 
-                // Hacemos la consulta de forma asíncrona
-                kotlinx.coroutines.GlobalScope.launch {
+                // Hacemos la consulta de forma asíncrona y segura
+                lifecycleScope.launch {
                     try {
                         val bloques = db.bloqueServicioDao().obtenerTodos()
                         val circuitos = db.circuitoDao().obtenerTodos()
                         
-                        runOnUiThread {
-                            tv.append("¡ÉXITO!\n")
-                            tv.append("Circuitos: ${circuitos.size}\n")
-                            tv.append("Bloques: ${bloques.size}\n")
-                        }
+                        tv.append("¡ÉXITO!\n")
+                        tv.append("Circuitos en BD: ${circuitos.size}\n")
+                        tv.append("Bloques en BD: ${bloques.size}\n\n")
+                        tv.append("La base de datos funciona correctamente.\n")
                     } catch (e: Exception) {
-                        runOnUiThread {
-                            tv.append("Error en consulta: ${e.message}\n")
-                        }
+                        tv.append("Error en consulta: ${e.message}\n")
                     }
                 }
             } catch (e: Throwable) {
