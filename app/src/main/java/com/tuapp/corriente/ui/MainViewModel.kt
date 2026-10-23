@@ -12,12 +12,7 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
 
 class MainViewModel(app: Application) : AndroidViewModel(app) {
-    
-    // Usamos 'as?' para no crashear si el manifest está mal
-    private val appReal = app as? CorrienteApp 
-        ?: error("ERROR: El AndroidManifest.xml no tiene android:name=\".CorrienteApp\"")
-        
-    private val db = appReal.db
+    private val db = (app as CorrienteApp).db
     private val circuitoDao = db.circuitoDao()
     private val bloqueDao = db.bloqueServicioDao()
 
@@ -26,15 +21,11 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            try {
-                if (circuitoDao.contar() == 0) {
-                    circuitoDao.insertarVarios(DatosIniciales.circuitos)
-                }
-                if (bloqueDao.obtenerTodos().isEmpty()) {
-                    bloqueDao.insertarVarios(DatosBloques.generarBloques())
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+            if (circuitoDao.contar() == 0) {
+                circuitoDao.insertarVarios(DatosIniciales.circuitos)
+            }
+            if (bloqueDao.obtenerTodos().isEmpty()) {
+                bloqueDao.insertarVarios(DatosBloques.generarBloques())
             }
         }
     }
