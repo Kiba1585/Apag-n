@@ -1,35 +1,19 @@
 package com.tuapp.corriente.ui
 
-import android.app.Application
-import androidx.lifecycle.AndroidViewModel
-import androidx.lifecycle.viewModelScope
-import com.tuapp.corriente.CorrienteApp
-import com.tuapp.corriente.data.DatosBloques
+import androidx.lifecycle.ViewModel
 import com.tuapp.corriente.data.DatosIniciales
-import kotlinx.coroutines.flow.SharingStarted
-import kotlinx.coroutines.flow.stateIn
-import kotlinx.coroutines.launch
+import com.tuapp.corriente.data.entity.Circuito
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 
-class MainViewModel(app: Application) : AndroidViewModel(app) {
-    private val db = (app as CorrienteApp).db
-    private val circuitoDao = db.circuitoDao()
-    private val bloqueDao = db.bloqueServicioDao()
-
-    val circuitos = circuitoDao.observarTodos()
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5000), emptyList())
+class MainViewModel : ViewModel() {
+    // Usamos una lista en memoria en lugar de Room
+    private val _circuitos = MutableStateFlow<List<Circuito>>(emptyList())
+    val circuitos: StateFlow<List<Circuito>> = _circuitos.asStateFlow()
 
     init {
-        viewModelScope.launch {
-            try {
-                if (circuitoDao.contar() == 0) {
-                    circuitoDao.insertarVarios(DatosIniciales.circuitos)
-                }
-                if (bloqueDao.obtenerTodos().isEmpty()) {
-                    bloqueDao.insertarVarios(DatosBloques.generarBloques())
-                }
-            } catch (e: Exception) {
-                e.printStackTrace() // Si falla algo aquí, no cerrará la app
-            }
-        }
+        // Cargamos los circuitos iniciales
+        _circuitos.value = DatosIniciales.circuitos
     }
 }
