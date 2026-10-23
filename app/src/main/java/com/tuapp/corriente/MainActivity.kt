@@ -10,6 +10,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
@@ -22,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.tuapp.corriente.data.DatosBloques
 import com.tuapp.corriente.data.DatosIniciales
@@ -144,6 +146,18 @@ fun EditarHorarioDialog(
 ) {
     val context = LocalContext.current
     var listaEditada by remember { mutableStateOf(bloquesActuales.toList()) }
+    var mostrarGenerador by remember { mutableStateOf(false) }
+
+    if (mostrarGenerador) {
+        GeneradorPlantillaDialog(
+            circuito = circuito,
+            onDismiss = { mostrarGenerador = false },
+            onGenerar = { nuevos ->
+                listaEditada = nuevos
+                mostrarGenerador = false
+            }
+        )
+    }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -158,7 +172,7 @@ fun EditarHorarioDialog(
                     Text("No hay bloques asignados.", style = MaterialTheme.typography.bodySmall)
                 }
 
-                LazyColumn(Modifier.heightIn(max = 300.dp)) {
+                LazyColumn(Modifier.heightIn(max = 250.dp)) {
                     items(listaEditada.sortedBy { it.horaInicio }) { bloque ->
                         Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
                             Text("${bloque.horaInicio} a ${bloque.horaFin}", style = MaterialTheme.typography.bodyMedium)
@@ -170,36 +184,119 @@ fun EditarHorarioDialog(
                 }
                 
                 Spacer(Modifier.height(8.dp))
-                Button(
-                    onClick = {
-                        // 1. Pedir hora de INICIO
-                        TimePickerDialog(context, { _, hIni, mIni ->
-                            val inicio = LocalTime.of(hIni, mIni)
-                            
-                            // 2. Al aceptar el inicio, pedir hora de FIN
-                            TimePickerDialog(context, { _, hFin, mFin ->
-                                val fin = LocalTime.of(hFin, mFin)
-                                val nuevo = BloqueServicio(
-                                    id = System.currentTimeMillis(),
-                                    circuitoCodigo = circuito.codigo,
-                                    horaInicio = inicio,
-                                    horaFin = fin
-                                )
-                                listaEditada = listaEditada + nuevo
-                            }, inicio.plusHours(3).hour, inicio.plusHours(3).minute, true).show()
-                            
-                        }, 12, 0, true).show() // Abre por defecto a las 12:00
-                    },
-                    modifier = Modifier.fillMaxWidth()
-                ) {
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Añadir bloque")
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(
+                        onClick = { mostrarGenerador = true },
+                        modifier = Modifier.weight(1f),
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)
+                    ) {
+                        Text("Plantilla rápida")
+                    }
+                    
+                    Button(
+                        onClick = {
+                            TimePickerDialog(context, { _, hIni, mIni ->
+                                val inicio = LocalTime.of(hIni, mIni)
+                                TimePickerDialog(context, { _, hFin, mFin ->
+                                    val fin = LocalTime.of(hFin, mFin)
+                                    val nuevo = BloqueServicio(
+                                        id = System.currentTimeMillis(),
+                                        circuitoCodigo = circuito.codigo,
+                                        horaInicio = inicio,
+                                        horaFin = fin
+                                    )
+                                    listaEditada = listaEditada + nuevo
+                                }, inicio.plusHours(3).hour, inicio.plusHours(3).minute, true).show()
+                            }, 12, 0, true).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Text("Manual")
+                    }
                 }
             }
         },
         confirmButton = {
             TextButton(onClick = { onSave(listaEditada) }) { Text("Guardar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
+
+@Composable
+fun GeneradorPlantillaDialog(
+    circuito: Circuito,
+    onDismiss: () -> Unit,
+    onGenerar: (List<BloqueServicio>) -> Unit
+) {
+    val context = LocalContext.current
+    var horasCorriente by remember { mutableStateOf("2") }
+    var horasApagon by remember { mutableStateOf("8") }
+    var horaInicio by remember { mutableStateOf(LocalTime.of(0, 0)) }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Plantilla Automática") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Configura el nuevo esquema (ej. 2x8):", style = MaterialTheme.typography.bodySmall)
+                
+                OutlinedTextField(
+                    value = horasCorriente,
+                    onValueChange = { horasCorriente = it },
+                    label = { Text("Horas de corriente (ej. 2)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                
+                OutlinedTextField(
+                    value = horasApagon,
+                    onValueChange = { horasApagon = it },
+                    label = { Text("Horas de apagón (ej. 8)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    singleLine = true
+                )
+                
+                Button(onClick = {
+                    TimePickerDialog(context, { _, h, m ->
+                        horaInicio = LocalTime.of(h, m)
+                    }, horaInicio.hour, horaInicio.minute, true).show()
+                }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Inicio del 1er bloque: $horaInicio")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val duracion = horasCorriente.toLongOrNull() ?: 2L
+                val apagon = horasApagon.toLongOrNull() ?: 8L
+                val nuevosBloques = mutableListOf<BloqueServicio>()
+                
+                var inicioActual = horaInicio
+                // Generamos bloques hasta que el inicio pase de las 23:59
+                while (true) {
+                    val fin = inicioActual.plusHours(duracion)
+                    nuevosBloques.add(
+                        BloqueServicio(
+                            id = System.currentTimeMillis() + nuevosBloques.size,
+                            circuitoCodigo = circuito.codigo,
+                            horaInicio = inicioActual,
+                            horaFin = fin
+                        )
+                    )
+                    
+                    // El siguiente inicio es el fin actual + las horas de apagón
+                    inicioActual = fin.plusHours(apagon)
+                    
+                    // Si el siguiente bloque empieza al día siguiente o el mismo día pero más temprano, paramos
+                    if (inicioActual.isBefore(horaInicio) || inicioActual == horaInicio) break
+                    if (nuevosBloques.size > 10) break // Seguro para no hacer bucle infinito
+                }
+                
+                onGenerar(nuevosBloques)
+            }) { Text("Generar") }
         },
         dismissButton = {
             TextButton(onClick = onDismiss) { Text("Cancelar") }
