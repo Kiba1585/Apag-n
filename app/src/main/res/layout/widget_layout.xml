@@ -3,25 +3,40 @@
     android:layout_width="match_parent"
     android:layout_height="match_parent"
     android:orientation="vertical"
-    android:padding="8dp"
+    android:padding="12dp"
     android:background="#222222"
-    android:gravity="center">
+    android:gravity="center_vertical">
 
+    <!-- Código y Nombre (Ej: A133 · Pueblo Nuevo) -->
     <TextView
-        android:id="@+id/widget_estado"
-        android:layout_width="wrap_content"
+        android:id="@+id/widget_codigo"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
         android:textColor="#FFFFFF"
-        android:textSize="12sp"
+        android:textSize="14sp"
         android:textStyle="bold"
-        android:text="A060 🟢" />
+        android:maxLines="1"
+        android:ellipsize="end"
+        android:text="A133 · Pueblo Nuevo" />
 
+    <!-- Estado (Ej: 🔴 SIN LUZ) -->
+    <TextView
+        android:id="@+id/widget_estado"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:textColor="#4CAF50"
+        android:textSize="20sp"
+        android:textStyle="bold"
+        android:layout_marginTop="4dp"
+        android:text="CON LUZ" />
+
+    <!-- Tiempo (Ej: Quedan 2h 15m) -->
     <TextView
         android:id="@+id/widget_tiempo"
-        android:layout_width="wrap_content"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:textColor="#AAAAAA"
-        android:textSize="11sp"
+        android:textColor="#BBBBBB"
+        android:textSize="14sp"
         android:layout_marginTop="2dp"
-        android:text="2h 15m" />
+        android:text="Quedan 2h 15m" />
 </LinearLayout>
