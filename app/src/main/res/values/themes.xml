@@ -2,5 +2,6 @@
 <resources>
     <style name="Theme.Corriente" parent="android:Theme.Material.Light.NoActionBar">
         <item name="android:statusBarColor">#FFC107</item>
+        <item name="android:windowBackground">@android:color/white</item>
     </style>
 </resources>
