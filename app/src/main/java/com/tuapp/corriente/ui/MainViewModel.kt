@@ -6,7 +6,6 @@ import androidx.lifecycle.viewModelScope
 import com.tuapp.corriente.CorrienteApp
 import com.tuapp.corriente.data.DatosBloques
 import com.tuapp.corriente.data.DatosIniciales
-import com.tuapp.corriente.data.entity.Circuito
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.launch
@@ -21,20 +20,16 @@ class MainViewModel(app: Application) : AndroidViewModel(app) {
 
     init {
         viewModelScope.launch {
-            if (circuitoDao.contar() == 0) {
-                circuitoDao.insertarVarios(DatosIniciales.circuitos)
-            }
-            if (bloqueDao.obtenerTodos().isEmpty()) {
-                bloqueDao.insertarVarios(DatosBloques.generarBloques())
+            try {
+                if (circuitoDao.contar() == 0) {
+                    circuitoDao.insertarVarios(DatosIniciales.circuitos)
+                }
+                if (bloqueDao.obtenerTodos().isEmpty()) {
+                    bloqueDao.insertarVarios(DatosBloques.generarBloques())
+                }
+            } catch (e: Exception) {
+                e.printStackTrace() // Si falla algo aquí, no cerrará la app
             }
         }
-    }
-
-    fun eliminarCircuito(circuito: Circuito) {
-        viewModelScope.launch { circuitoDao.eliminar(circuito) }
-    }
-
-    fun agregarCircuito(circuito: Circuito) {
-        viewModelScope.launch { circuitoDao.insertar(circuito) }
     }
 }
