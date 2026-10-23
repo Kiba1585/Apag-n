@@ -1,82 +1,18 @@
 package com.tuapp.corriente
 
 import android.os.Bundle
-import android.widget.Button
-import android.widget.LinearLayout
-import android.widget.ScrollView
 import android.widget.TextView
 import androidx.activity.ComponentActivity
-import androidx.lifecycle.lifecycleScope
-import kotlinx.coroutines.launch
-import java.io.File
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        val logFile = File(filesDir, "crash_log.txt")
-
-        if (logFile.exists()) {
-            // SI HAY UN ERROR GUARDADO, LO MOSTRAMOS EN PANTALLA
-            val layout = LinearLayout(this).apply {
-                orientation = LinearLayout.VERTICAL
-                setPadding(40, 40, 40, 40)
-            }
-
-            val btnLimpiar = Button(this).apply {
-                text = "Borrar registro y reintentar"
-                setOnClickListener {
-                    logFile.delete()
-                    recreate() // Reinicia la activity
-                }
-            }
-
-            val tvError = TextView(this).apply {
-                text = "ERROR DETECTADO:\n\n${logFile.readText()}"
-                textSize = 12f
-                setTextIsSelectable(true)
-            }
-
-            val scroll = ScrollView(this).apply {
-                addView(tvError)
-            }
-
-            layout.addView(btnLimpiar)
-            layout.addView(scroll)
-            setContentView(layout)
-            
-        } else {
-            // SI NO HAY ERRORES, INICIA LA PRUEBA
-            val tv = TextView(this)
-            tv.text = "Iniciando prueba...\n\n"
-            tv.textSize = 16f
-            tv.setPadding(50, 50, 50, 50)
-            setContentView(tv)
-
-            try {
-                val app = application as CorrienteApp
-                val db = app.db
-
-                tv.append("Base de datos instanciada.\n")
-                tv.append("Probando lectura...\n\n")
-
-                // Hacemos la consulta de forma asíncrona y segura
-                lifecycleScope.launch {
-                    try {
-                        val bloques = db.bloqueServicioDao().obtenerTodos()
-                        val circuitos = db.circuitoDao().obtenerTodos()
-                        
-                        tv.append("¡ÉXITO!\n")
-                        tv.append("Circuitos en BD: ${circuitos.size}\n")
-                        tv.append("Bloques en BD: ${bloques.size}\n\n")
-                        tv.append("La base de datos funciona correctamente.\n")
-                    } catch (e: Exception) {
-                        tv.append("Error en consulta: ${e.message}\n")
-                    }
-                }
-            } catch (e: Throwable) {
-                tv.append("Error al iniciar BD: ${e.message}\n")
-            }
-        }
+        
+        val tv = TextView(this)
+        tv.text = "¡LA APP FUNCIONA!\n\nSi ves este mensaje, el problema estaba en la Base de Datos, en Compose o en el Tema."
+        tv.textSize = 18f
+        tv.setPadding(50, 100, 50, 50)
+        
+        setContentView(tv)
     }
 }
