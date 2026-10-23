@@ -19,7 +19,6 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Edit
 import androidx.compose.material.icons.filled.Star
-import androidx.compose.material.icons.outlined.StarBorder
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
@@ -118,6 +117,7 @@ fun PantallaEnVivo() {
                         IconButton(onClick = {
                             favorito = c.codigo
                             scheduleManager.guardarCircuitoFavorito(c.codigo)
+                            
                             // Forzar actualización del widget
                             val intent = Intent(context, CorrienteWidget::class.java).apply {
                                 action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
@@ -127,9 +127,9 @@ fun PantallaEnVivo() {
                             context.sendBroadcast(intent)
                         }) {
                             Icon(
-                                imageVector = if (favorito == c.codigo) Icons.Filled.Star else Icons.Outlined.StarBorder,
+                                imageVector = Icons.Default.Star,
                                 contentDescription = "Favorito",
-                                tint = if (favorito == c.codigo) Color(0xFFFFC107) else MaterialTheme.colorScheme.onSurfaceVariant
+                                tint = if (favorito == c.codigo) Color(0xFFFFC107) else Color.Gray
                             )
                         }
 
@@ -160,7 +160,6 @@ fun PantallaEnVivo() {
     }
 }
 
-// ... (EL RESTO DEL CÓDIGO DEL DIÁLOGO DE EDICIÓN Y GENERADOR DE PLANTILLAS SE MANTIENE IGUAL QUE EN LA RESPUESTA ANTERIOR)
 @Composable
 fun EditarHorarioDialog(
     circuito: Circuito,
