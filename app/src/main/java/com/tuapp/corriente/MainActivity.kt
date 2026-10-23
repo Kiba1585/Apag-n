@@ -78,15 +78,16 @@ fun PantallaEnVivo() {
     val context = LocalContext.current
     val scheduleManager = remember { ScheduleManager(context) }
     
-    // Cargamos los circuitos guardados o los iniciales por defecto
     var circuitos by remember { mutableStateOf(scheduleManager.cargarCircuitos() ?: DatosIniciales.circuitos) }
     var todosLosBloques by remember { mutableStateOf(scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()) }
     var favorito by remember { mutableStateOf(scheduleManager.obtenerCircuitoFavorito() ?: "A060") }
     
+    // Estado para saber qué alarmas están activas
+    var alarmasActivas by remember { mutableStateOf(scheduleManager.obtenerAlarmasActivas()) }
+    
     val bloquesPorCircuito = remember(todosLosBloques) { todosLosBloques.groupBy { it.circuitoCodigo } }
     var ahora by remember { mutableStateOf(LocalTime.now()) }
     var circuitoAEditar by remember { mutableStateOf<Circuito?>(null) }
-    
     var mostrarDialogoAgregar by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -96,9 +97,6 @@ fun PantallaEnVivo() {
         }
     }
 
-    // LÓGICA DE ORDENACIÓN AUTOMÁTICA
-    // 1ro los que tienen corriente (verde), luego los que no (rojo).
-    // Dentro de cada grupo, ordenados por el que cambia más pronto.
     val circuitosOrdenados = circuitos.map { c ->
         val bloques = bloquesPorCircuito[c.codigo] ?: emptyList()
         val estado = HorarioCalculator.calcular(bloques, ahora)
@@ -155,6 +153,9 @@ fun PantallaEnVivo() {
                         else -> "Sin corriente (vuelve en $tiempoTexto)"
                     }
 
+                    // Comprobamos si ESTE circuito tiene la alarma activa
+                    val alarmaActivada = alarmasActivas.contains(c.codigo)
+
                     Card(
                         Modifier.fillMaxWidth(),
                         colors = CardDefaults.cardColors(containerColor = colorEstado.copy(alpha = 0.1f)),
@@ -168,11 +169,28 @@ fun PantallaEnVivo() {
                                 Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
                             }
                             
+                            // BOTÓN DE LA CAMPANA
                             IconButton(onClick = {
-                                AlarmaScheduler.programarAlarma(context, bloquesPorCircuito[c.codigo] ?: emptyList(), c.codigo)
-                                Toast.makeText(context, "Alarma programada (15 min antes)", Toast.LENGTH_SHORT).show()
+                                if (alarmaActivada) {
+                                    // Desactivar
+                                    AlarmaScheduler.cancelarAlarma(context, c.codigo)
+                                    scheduleManager.desactivarAlarma(c.codigo)
+                                    alarmasActivas = alarmasActivas - c.codigo
+                                    Toast.makeText(context, "Alarma desactivada", Toast.LENGTH_SHORT).show()
+                                } else {
+                                    // Activar
+                                    AlarmaScheduler.programarAlarma(context, bloquesPorCircuito[c.codigo] ?: emptyList(), c.codigo)
+                                    scheduleManager.activarAlarma(c.codigo)
+                                    alarmasActivas = alarmasActivas + c.codigo
+                                    Toast.makeText(context, "Alarma activada (15 min antes)", Toast.LENGTH_SHORT).show()
+                                }
                             }) {
-                                Icon(Icons.Default.Notifications, contentDescription = "Alarma", tint = Color.Gray)
+                                Icon(
+                                    imageVector = Icons.Default.Notifications,
+                                    contentDescription = "Alarma",
+                                    // Azul si está activa, gris si no
+                                    tint = if (alarmaActivada) Color(0xFF2196F3) else Color.Gray
+                                )
                             }
 
                             IconButton(onClick = {
@@ -192,7 +210,6 @@ fun PantallaEnVivo() {
                                 Icon(Icons.Default.Edit, contentDescription = "Editar", tint = MaterialTheme.colorScheme.primary)
                             }
                             
-                            // BOTÓN PARA ELIMINAR CIRCUITO
                             IconButton(onClick = {
                                 val nuevaLista = circuitos.filter { it.codigo != c.codigo }
                                 circuitos = nuevaLista
@@ -285,7 +302,7 @@ fun AgregarCircuitoDialog(
     )
 }
 
-// (LOS DIÁLOGOS EditarHorarioDialog Y GeneradorPlantillaDialog SE MANTIENEN IGUAL)
+// (El resto de diálogos EditarHorarioDialog y GeneradorPlantillaDialog se mantienen igual)
 @Composable
 fun EditarHorarioDialog(
     circuito: Circuito,
@@ -429,23 +446,4 @@ fun GeneradorPlantillaDialog(
                     nuevosBloques.add(
                         BloqueServicio(
                             id = System.currentTimeMillis() + nuevosBloques.size,
-                            circuitoCodigo = circuito.codigo,
-                            horaInicio = inicioActual,
-                            horaFin = fin
-                        )
-                    )
-                    
-                    inicioActual = fin.plusHours(apagon)
-                    
-                    if (inicioActual.isBefore(horaInicio) || inicioActual == horaInicio) break
-                    if (nuevosBloques.size > 10) break
-                }
-                
-                onGenerar(nuevosBloques)
-            }) { Text("Generar") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
-        }
-    )
-}
+     
