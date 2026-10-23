@@ -5,6 +5,7 @@ import android.appwidget.AppWidgetManager
 import android.appwidget.AppWidgetProvider
 import android.content.Context
 import android.content.Intent
+import android.graphics.Color
 import android.widget.RemoteViews
 import com.tuapp.corriente.data.DatosBloques
 import com.tuapp.corriente.data.DatosIniciales
@@ -32,15 +33,23 @@ class CorrienteWidget : AppWidgetProvider() {
         val ahora = LocalTime.now()
         val estado = HorarioCalculator.calcular(bloquesDelCircuito, ahora)
         
+        // Formatear tiempo
         val horas = estado.minutosHastaCambio / 60
         val mins = estado.minutosHastaCambio % 60
         val tiempoTexto = if (horas > 0) "${horas}h ${mins}m" else "${mins}m"
         
-        val emoji = if (estado.tieneCorriente) "🟢" else "🔴"
+        // Colores y textos según el estado
+        val colorEstado = if (estado.tieneCorriente) Color.parseColor("#4CAF50") else Color.parseColor("#F44336")
+        val textoEstado = if (estado.tieneCorriente) "🟢 CON LUZ" else "🔴 SIN LUZ"
+        val textoTiempo = if (estado.tieneCorriente) "Quedan $tiempoTexto" else "Vuelve en $tiempoTexto"
 
-        views.setTextViewText(R.id.widget_estado, "${circuito.codigo} $emoji")
-        views.setTextViewText(R.id.widget_tiempo, tiempoTexto)
+        // Asignar valores a las vistas
+        views.setTextViewText(R.id.widget_codigo, "${circuito.codigo} · ${circuito.nombre}")
+        views.setTextViewText(R.id.widget_estado, textoEstado)
+        views.setTextColor(R.id.widget_estado, colorEstado) // Pintamos el texto de verde o rojo
+        views.setTextViewText(R.id.widget_tiempo, textoTiempo)
 
+        // Al tocar el widget, abrir la app
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         views.setOnClickPendingIntent(R.id.widget_estado, pendingIntent)
