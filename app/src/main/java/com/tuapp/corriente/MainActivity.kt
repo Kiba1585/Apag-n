@@ -13,6 +13,7 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -81,13 +82,12 @@ fun PantallaEnVivo() {
     var circuitos by remember { mutableStateOf(scheduleManager.cargarCircuitos() ?: DatosIniciales.circuitos) }
     var todosLosBloques by remember { mutableStateOf(scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()) }
     var favorito by remember { mutableStateOf(scheduleManager.obtenerCircuitoFavorito() ?: "A060") }
-    
-    // Estado para saber qué alarmas están activas
     var alarmasActivas by remember { mutableStateOf(scheduleManager.obtenerAlarmasActivas()) }
     
     val bloquesPorCircuito = remember(todosLosBloques) { todosLosBloques.groupBy { it.circuitoCodigo } }
     var ahora by remember { mutableStateOf(LocalTime.now()) }
     var circuitoAEditar by remember { mutableStateOf<Circuito?>(null) }
+    
     var mostrarDialogoAgregar by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
@@ -153,7 +153,6 @@ fun PantallaEnVivo() {
                         else -> "Sin corriente (vuelve en $tiempoTexto)"
                     }
 
-                    // Comprobamos si ESTE circuito tiene la alarma activa
                     val alarmaActivada = alarmasActivas.contains(c.codigo)
 
                     Card(
@@ -169,16 +168,13 @@ fun PantallaEnVivo() {
                                 Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
                             }
                             
-                            // BOTÓN DE LA CAMPANA
                             IconButton(onClick = {
                                 if (alarmaActivada) {
-                                    // Desactivar
                                     AlarmaScheduler.cancelarAlarma(context, c.codigo)
                                     scheduleManager.desactivarAlarma(c.codigo)
                                     alarmasActivas = alarmasActivas - c.codigo
                                     Toast.makeText(context, "Alarma desactivada", Toast.LENGTH_SHORT).show()
                                 } else {
-                                    // Activar
                                     AlarmaScheduler.programarAlarma(context, bloquesPorCircuito[c.codigo] ?: emptyList(), c.codigo)
                                     scheduleManager.activarAlarma(c.codigo)
                                     alarmasActivas = alarmasActivas + c.codigo
@@ -188,7 +184,6 @@ fun PantallaEnVivo() {
                                 Icon(
                                     imageVector = Icons.Default.Notifications,
                                     contentDescription = "Alarma",
-                                    // Azul si está activa, gris si no
                                     tint = if (alarmaActivada) Color(0xFF2196F3) else Color.Gray
                                 )
                             }
@@ -225,7 +220,9 @@ fun PantallaEnVivo() {
     }
 
     if (mostrarDialogoAgregar) {
-        AgregarCircuitoDialog(
+        // NUEVO DIÁLOGO: Selector de circuitos predefinidos
+        SeleccionarCircuitoDialog(
+            circuitosActuales = circuitos,
             onDismiss = { mostrarDialogoAgregar = false },
             onAdd = { nuevo ->
                 val nuevaLista = circuitos + nuevo
@@ -252,8 +249,79 @@ fun PantallaEnVivo() {
     }
 }
 
+// --- NUEVOS DIÁLOGOS PARA AÑADIR CIRCUITOS ---
+
 @Composable
-fun AgregarCircuitoDialog(
+fun SeleccionarCircuitoDialog(
+    circuitosActuales: List<Circuito>,
+    onDismiss: () -> Unit,
+    onAdd: (Circuito) -> Unit
+) {
+    var mostrarCreacionManual by remember { mutableStateOf(false) }
+    
+    // Filtramos los circuitos que ya están en pantalla para no repetirlos
+    val disponibles = DatosIniciales.circuitos.filter { base -> 
+        circuitosActuales.none { it.codigo == base.codigo } 
+    }
+
+    if (mostrarCreacionManual) {
+        AgregarCircuitoManualDialog(
+            onDismiss = { mostrarCreacionManual = false },
+            onAdd = { nuevo -> onAdd(nuevo) }
+        )
+        return
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Añadir Circuito") },
+        text = {
+            Column {
+                if (disponibles.isEmpty()) {
+                    Text("Ya tienes todos los circuitos predefinidos en tu lista.", style = MaterialTheme.typography.bodyMedium)
+                } else {
+                    Text("Selecciona uno de la lista:", style = MaterialTheme.typography.bodySmall)
+                    Spacer(Modifier.height(8.dp))
+                    LazyColumn(Modifier.heightIn(max = 300.dp)) {
+                        items(disponibles, key = { it.codigo }) { c ->
+                            Row(
+                                modifier = Modifier
+                                    .fillMaxWidth()
+                                    .clickable { onAdd(c) }
+                                    .padding(vertical = 12.dp, horizontal = 4.dp),
+                                verticalAlignment = Alignment.CenterVertically
+                            ) {
+                                Box(Modifier.size(12.dp).clip(CircleShape).background(Color(c.color)))
+                                Spacer(Modifier.width(12.dp))
+                                Column {
+                                    Text("${c.codigo} · ${c.nombre}", style = MaterialTheme.typography.titleSmall)
+                                    Text(c.zona, style = MaterialTheme.typography.labelSmall, color = Color.Gray)
+                                }
+                            }
+                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(16.dp))
+                OutlinedButton(
+                    onClick = { mostrarCreacionManual = true },
+                    modifier = Modifier.fillMaxWidth()
+                ) {
+                    Icon(Icons.Default.Add, contentDescription = null)
+                    Spacer(Modifier.width(8.dp))
+                    Text("Crear uno nuevo manualmente")
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = onDismiss) { Text("Cerrar") }
+        }
+    )
+}
+
+@Composable
+fun AgregarCircuitoManualDialog(
     onDismiss: () -> Unit,
     onAdd: (Circuito) -> Unit
 ) {
@@ -262,7 +330,7 @@ fun AgregarCircuitoDialog(
     
     AlertDialog(
         onDismissRequest = onDismiss,
-        title = { Text("Añadir Circuito") },
+        title = { Text("Circuito Personalizado") },
         text = {
             Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 OutlinedTextField(
@@ -376,93 +444,4 @@ fun EditarHorarioDialog(
                             }, 12, 0, true).show()
                         },
                         modifier = Modifier.weight(1f)
-                    ) {
-                        Text("Manual")
-                    }
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = { onSave(listaEditada) }) { Text("Guardar") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
-        }
-    )
-}
-
-@Composable
-fun GeneradorPlantillaDialog(
-    circuito: Circuito,
-    onDismiss: () -> Unit,
-    onGenerar: (List<BloqueServicio>) -> Unit
-) {
-    val context = LocalContext.current
-    var horasCorriente by remember { mutableStateOf("2") }
-    var horasApagon by remember { mutableStateOf("8") }
-    var horaInicio by remember { mutableStateOf(LocalTime.of(0, 0)) }
-
-    AlertDialog(
-        onDismissRequest = onDismiss,
-        title = { Text("Plantilla Automática") },
-        text = {
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text("Configura el nuevo esquema (ej. 2x8):", style = MaterialTheme.typography.bodySmall)
-                
-                OutlinedTextField(
-                    value = horasCorriente,
-                    onValueChange = { horasCorriente = it },
-                    label = { Text("Horas de corriente (ej. 2)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-                
-                OutlinedTextField(
-                    value = horasApagon,
-                    onValueChange = { horasApagon = it },
-                    label = { Text("Horas de apagón (ej. 8)") },
-                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                    singleLine = true
-                )
-                
-                Button(onClick = {
-                    TimePickerDialog(context, { _, h, m ->
-                        horaInicio = LocalTime.of(h, m)
-                    }, horaInicio.hour, horaInicio.minute, true).show()
-                }, modifier = Modifier.fillMaxWidth()) {
-                    Text("Inicio del 1er bloque: $horaInicio")
-                }
-            }
-        },
-        confirmButton = {
-            TextButton(onClick = {
-                val duracion = horasCorriente.toLongOrNull() ?: 2L
-                val apagon = horasApagon.toLongOrNull() ?: 8L
-                val nuevosBloques = mutableListOf<BloqueServicio>()
-                
-                var inicioActual = horaInicio
-                while (true) {
-                    val fin = inicioActual.plusHours(duracion)
-                    nuevosBloques.add(
-                        BloqueServicio(
-                            id = System.currentTimeMillis() + nuevosBloques.size,
-                            circuitoCodigo = circuito.codigo,
-                            horaInicio = inicioActual,
-                            horaFin = fin
-                        )
-                    )
-                    
-                    inicioActual = fin.plusHours(apagon)
-                    
-                    if (inicioActual.isBefore(horaInicio) || inicioActual == horaInicio) break
-                    if (nuevosBloques.size > 10) break
-                }
-                
-                onGenerar(nuevosBloques)
-            }) { Text("Generar") }
-        },
-        dismissButton = {
-            TextButton(onClick = onDismiss) { Text("Cancelar") }
-        }
-    )
-}
+     
