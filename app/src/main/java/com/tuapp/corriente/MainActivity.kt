@@ -446,4 +446,23 @@ fun GeneradorPlantillaDialog(
                     nuevosBloques.add(
                         BloqueServicio(
                             id = System.currentTimeMillis() + nuevosBloques.size,
-     
+                            circuitoCodigo = circuito.codigo,
+                            horaInicio = inicioActual,
+                            horaFin = fin
+                        )
+                    )
+                    
+                    inicioActual = fin.plusHours(apagon)
+                    
+                    if (inicioActual.isBefore(horaInicio) || inicioActual == horaInicio) break
+                    if (nuevosBloques.size > 10) break
+                }
+                
+                onGenerar(nuevosBloques)
+            }) { Text("Generar") }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text("Cancelar") }
+        }
+    )
+}
