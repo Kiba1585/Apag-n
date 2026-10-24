@@ -112,7 +112,7 @@ fun PantallaEnVivo() {
     if (necesitaOnboarding) {
         OnboardingScreen(
             onCircuitoSeleccionado = { circuitoElegido ->
-                val nuevaLista = listOf(circuitoElegido) // Solo guardamos el que eligió
+                val nuevaLista = listOf(circuitoElegido)
                 circuitos = nuevaLista
                 scheduleManager.guardarCircuitos(nuevaLista)
                 scheduleManager.marcarOnboardingCompletado()
@@ -176,11 +176,11 @@ fun PantallaEnVivo() {
                     val dismissState = rememberSwipeToDismissBoxState(
                         confirmValueChange = {
                             if (it == SwipeToDismissBoxValue.StartToEnd) {
-                                circuitoAEditar = c // Deslizar a la derecha = Editar
+                                circuitoAEditar = c 
                             } else if (it == SwipeToDismissBoxValue.EndToStart) {
-                                val nuevaLista = circuitos.filter { it.codigo != c.codigo }
+                                val nuevaLista = circuitos.filter { circ -> circ.codigo != c.codigo }
                                 circuitos = nuevaLista
-                                scheduleManager.guardarCircuitos(nuevaLista) // Deslizar a la izquierda = Borrar
+                                scheduleManager.guardarCircuitos(nuevaLista)
                             }
                             true
                         }
@@ -188,8 +188,8 @@ fun PantallaEnVivo() {
 
                     SwipeToDismissBox(
                         state = dismissState,
-                        enableDismissFromStartToEnd = true, // Habilitar swipe a la derecha
-                        enableDismissFromEndToStart = true, // Habilitar swipe a la izquierda
+                        enableDismissFromStartToEnd = true,
+                        enableDismissFromEndToStart = true,
                         backgroundContent = {
                             val colorBg = if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) Color.Blue else Color.Red
                             val icono = if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) Icons.Default.Edit else Icons.Default.Delete
@@ -275,6 +275,15 @@ fun PantallaEnVivo() {
                 val listaActualizada = otrosCircuitos + nuevos
                 todosLosBloques = listaActualizada
                 scheduleManager.guardarBloques(listaActualizada)
+                
+                // FORZAR ACTUALIZACIÓN DEL WIDGET AL GUARDAR
+                val intent = Intent(context, CorrienteWidget::class.java).apply {
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+                }
+                context.sendBroadcast(intent)
+                
                 circuitoAEditar = null
             }
         )
@@ -288,7 +297,7 @@ fun OnboardingScreen(onCircuitoSeleccionado: (Circuito) -> Unit) {
 
     Column(Modifier.fillMaxSize().padding(24.dp), horizontalAlignment = Alignment.CenterHorizontally) {
         Spacer(Modifier.height(40.dp))
-        Icon(Icons.Default.Bolt, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color(0xFFFFC107))
+        Icon(Icons.Default.Build, contentDescription = null, modifier = Modifier.size(64.dp), tint = Color(0xFFFFC107))
         Text("Bienvenido a Corriente", style = MaterialTheme.typography.headlineMedium, fontWeight = FontWeight.Bold)
         Text("Selecciona el circuito de tu casa para empezar:", style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(top = 8.dp, bottom = 24.dp))
         
@@ -320,7 +329,7 @@ fun OnboardingScreen(onCircuitoSeleccionado: (Circuito) -> Unit) {
     }
 }
 
-// (El resto de los diálogos SeleccionarCircuitoDialog, AgregarCircuitoManualDialog, EditarHorarioDialog y GeneradorPlantillaDialog se mantienen EXACTAMENTE IGUAL que en la respuesta anterior)
+// --- DIÁLOGOS ---
 @Composable
 fun SeleccionarCircuitoDialog(
     circuitosActuales: List<Circuito>,
@@ -411,9 +420,4 @@ fun AgregarCircuitoManualDialog(
 fun EditarHorarioDialog(
     circuito: Circuito,
     bloquesActuales: List<BloqueServicio>,
-    onDismiss: () -> Unit,
-    onSave: (List<BloqueServicio>) -> Unit
-) {
-    val context = LocalContext.current
-    var listaEditada by remember { mutableStateOf(bloquesActuales.toList()) }
-    var mostrarGenerador b
+    onDismiss: () -> Unit
