@@ -168,7 +168,6 @@ fun PantallaEnVivo() {
     }
 }
 
-// --- DIÁLOGO DE EDICIÓN SIMPLIFICADO (REGLA) ---
 @Composable
 fun EditarReglaDialog(circuito: Circuito, reglaActual: ReglaHorario?, onDismiss: () -> Unit, onSave: (ReglaHorario) -> Unit) {
     val context = LocalContext.current
@@ -202,7 +201,6 @@ fun EditarReglaDialog(circuito: Circuito, reglaActual: ReglaHorario?, onDismiss:
     )
 }
 
-// --- RESTO DE DIÁLOGOS ---
 @Composable
 fun OnboardingScreen(onCircuitoSeleccionado: (Circuito) -> Unit) {
     var seleccionado by remember { mutableStateOf<Circuito?>(null) }
