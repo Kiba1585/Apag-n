@@ -11,7 +11,7 @@ import com.tuapp.corriente.data.DatosBloques
 import com.tuapp.corriente.data.DatosIniciales
 import com.tuapp.corriente.data.ScheduleManager
 import com.tuapp.corriente.util.HorarioCalculator
-import java.time.LocalTime
+import java.time.LocalDateTime
 
 class CorrienteWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
@@ -30,26 +30,22 @@ class CorrienteWidget : AppWidgetProvider() {
         val todosLosBloques = scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()
         val bloquesDelCircuito = todosLosBloques.filter { it.circuitoCodigo == circuito.codigo }
         
-        val ahora = LocalTime.now()
+        val ahora = LocalDateTime.now()
         val estado = HorarioCalculator.calcular(bloquesDelCircuito, ahora)
         
-        // Formatear tiempo
         val horas = estado.minutosHastaCambio / 60
         val mins = estado.minutosHastaCambio % 60
         val tiempoTexto = if (horas > 0) "${horas}h ${mins}m" else "${mins}m"
         
-        // Colores y textos según el estado
         val colorEstado = if (estado.tieneCorriente) Color.parseColor("#4CAF50") else Color.parseColor("#F44336")
         val textoEstado = if (estado.tieneCorriente) "🟢 CON LUZ" else "🔴 SIN LUZ"
         val textoTiempo = if (estado.tieneCorriente) "Quedan $tiempoTexto" else "Vuelve en $tiempoTexto"
 
-        // Asignar valores a las vistas
         views.setTextViewText(R.id.widget_codigo, "${circuito.codigo} · ${circuito.nombre}")
         views.setTextViewText(R.id.widget_estado, textoEstado)
-        views.setTextColor(R.id.widget_estado, colorEstado) // Pintamos el texto de verde o rojo
+        views.setTextColor(R.id.widget_estado, colorEstado)
         views.setTextViewText(R.id.widget_tiempo, textoTiempo)
 
-        // Al tocar el widget, abrir la app
         val intent = Intent(context, MainActivity::class.java)
         val pendingIntent = PendingIntent.getActivity(context, 0, intent, PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE)
         views.setOnClickPendingIntent(R.id.widget_estado, pendingIntent)
