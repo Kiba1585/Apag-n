@@ -40,9 +40,7 @@ class ScheduleManager(context: Context) {
                 )
             }
             lista
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
     fun guardarCircuitoFavorito(codigo: String) {
@@ -97,12 +95,9 @@ class ScheduleManager(context: Context) {
                 )
             }
             lista
-        } catch (e: Exception) {
-            null
-        }
+        } catch (e: Exception) { null }
     }
 
-    // NUEVAS FUNCIONES PARA LAS ALARMAS
     fun activarAlarma(codigo: String) {
         val actuales = obtenerAlarmasActivas().toMutableSet()
         actuales.add(codigo)
@@ -117,5 +112,14 @@ class ScheduleManager(context: Context) {
 
     fun obtenerAlarmasActivas(): Set<String> {
         return prefs.getStringSet("alarmas_activas", emptySet()) ?: emptySet()
+    }
+
+    // NUEVAS FUNCIONES PARA EL ONBOARDING
+    fun onboardingCompletado(): Boolean {
+        return prefs.getBoolean("onboarding_completado", false)
+    }
+
+    fun marcarOnboardingCompletado() {
+        prefs.edit().putBoolean("onboarding_completado", true).apply()
     }
 }
