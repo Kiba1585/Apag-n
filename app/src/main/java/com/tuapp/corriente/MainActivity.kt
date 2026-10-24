@@ -84,22 +84,54 @@ fun PantallaEnVivo() {
 
     if (necesitaOnboarding) {
         OnboardingScreen(onCircuitoSeleccionado = { 
-            circuitos = listOf(it); scheduleManager.guardarCircuitos(circuitos); scheduleManager.marcarOnboardingCompletado(); necesitaOnboarding = false 
+            circuitos = listOf(it)
+            scheduleManager.guardarCircuitos(circuitos)
+            favorito = it.codigo
+            scheduleManager.guardarCircuitoFavorito(it.codigo)
+            scheduleManager.marcarOnboardingCompletado()
+            necesitaOnboarding = false 
         })
         return
     }
 
     Scaffold(
-        topBar = { TopAppBar(title = { Text("⚡ Estado en Vivo") }, actions = { Text("${ahora.hour.toString().padStart(2, '0')}:${ahora.minute.toString().padStart(2, '0')}", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, modifier = Modifier.padding(end = 16.dp)) }) },
-        floatingActionButton = { FloatingActionButton(onClick = { mostrarDialogoAgregar = true }) { Icon(Icons.Default.Add, contentDescription = null) } }
+        topBar = { 
+            TopAppBar(
+                title = { Text("⚡ Estado en Vivo") }, 
+                actions = { 
+                    Text(
+                        "${ahora.hour.toString().padStart(2, '0')}:${ahora.minute.toString().padStart(2, '0')}", 
+                        style = MaterialTheme.typography.titleMedium, 
+                        fontWeight = FontWeight.Bold, 
+                        modifier = Modifier.padding(end = 16.dp)
+                    ) 
+                }
+            ) 
+        },
+        floatingActionButton = { 
+            FloatingActionButton(onClick = { mostrarDialogoAgregar = true }) { 
+                Icon(Icons.Default.Add, contentDescription = null) 
+            } 
+        }
     ) { padding ->
         if (circuitosOrdenados.isEmpty()) {
-            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { Text("No tienes circuitos. Toca + para añadir uno.") }
+            Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) { 
+                Text("No tienes circuitos. Toca + para añadir uno.") 
+            }
         } else {
-            LazyColumn(Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp), verticalArrangement = Arrangement.spacedBy(8.dp), contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)) {
+            LazyColumn(
+                Modifier.fillMaxSize().padding(padding).padding(horizontal = 12.dp), 
+                verticalArrangement = Arrangement.spacedBy(8.dp), 
+                contentPadding = PaddingValues(top = 12.dp, bottom = 80.dp)
+            ) {
                 items(circuitosOrdenados, key = { it.first.codigo }) { (c, estado) ->
-                    val colorEstado = when { estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> Color(0xFFFFC107); estado.tieneCorriente -> Color(0xFF4CAF50); else -> Color(0xFFF44336) }
-                    val horas = estado.minutosHastaCambio / 60; val mins = estado.minutosHastaCambio % 60
+                    val colorEstado = when { 
+                        estado.tieneCorriente && estado.minutosHastaCambio <= 30 -> Color(0xFFFFC107)
+                        estado.tieneCorriente -> Color(0xFF4CAF50)
+                        else -> Color(0xFFF44336) 
+                    }
+                    val horas = estado.minutosHastaCambio / 60
+                    val mins = estado.minutosHastaCambio % 60
                     val tiempoTexto = if (horas > 0) "${horas}h ${mins}m" else "${mins}m"
                     
                     val textoEstado = when {
@@ -110,37 +142,86 @@ fun PantallaEnVivo() {
                     }
                     val alarmaActivada = alarmasActivas.contains(c.codigo)
 
-                    val dismissState = rememberSwipeToDismissBoxState(confirmValueChange = {
-                        if (it == SwipeToDismissBoxValue.StartToEnd) circuitoAEditar = c 
-                        else if (it == SwipeToDismissBoxValue.EndToStart) { circuitos = circuitos.filter { circ -> circ.codigo != c.codigo }; scheduleManager.guardarCircuitos(circuitos) }
-                        true
-                    })
+                    // MENÚ DE OPCIONES (EDITAR/BORRAR)
+                    var menuExpandido by remember { mutableStateOf(false) }
 
-                    SwipeToDismissBox(
-                        state = dismissState, enableDismissFromStartToEnd = true, enableDismissFromEndToStart = true,
-                        backgroundContent = {
-                            val colorBg = if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) Color.Blue else Color.Red
-                            val icono = if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) Icons.Default.Edit else Icons.Default.Delete
-                            Box(Modifier.fillMaxSize().clip(RoundedCornerShape(8.dp)).background(colorBg).padding(horizontal = 20.dp), contentAlignment = if (dismissState.targetValue == SwipeToDismissBoxValue.StartToEnd) Alignment.CenterStart else Alignment.CenterEnd) { Icon(icono, contentDescription = null, tint = Color.White) }
-                        }
+                    Card(
+                        Modifier.fillMaxWidth(),
+                        colors = CardDefaults.cardColors(
+                            containerColor = MaterialTheme.colorScheme.surfaceVariant,
+                            contentColor = MaterialTheme.colorScheme.onSurfaceVariant
+                        ),
+                        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp),
+                        shape = RoundedCornerShape(8.dp)
                     ) {
-                        Card(Modifier.fillMaxWidth(), colors = CardDefaults.cardColors(containerColor = colorEstado.copy(alpha = 0.1f)), shape = RoundedCornerShape(8.dp)) {
-                            Row(Modifier.padding(8.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(14.dp).clip(CircleShape).background(Color(c.color)))
-                                Spacer(Modifier.width(8.dp))
-                                Column(Modifier.weight(1f)) {
-                                    Text("${c.codigo} · ${c.nombre}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
-                                    Text(textoEstado, style = MaterialTheme.typography.labelMedium, color = colorEstado, fontWeight = FontWeight.Bold)
+                        Row(Modifier.padding(start = 12.dp, top = 8.dp, bottom = 8.dp, end = 4.dp), verticalAlignment = Alignment.CenterVertically) {
+                            Box(Modifier.size(16.dp).clip(CircleShape).background(colorEstado))
+                            Spacer(Modifier.width(12.dp))
+                            Column(Modifier.weight(1f)) {
+                                Text("${c.codigo} · ${c.nombre}", style = MaterialTheme.typography.titleSmall, fontWeight = FontWeight.Bold)
+                                Text(textoEstado, style = MaterialTheme.typography.bodyMedium, color = colorEstado, fontWeight = FontWeight.Bold)
+                            }
+                            
+                            // Botón Alarma
+                            IconButton(onClick = {
+                                if (alarmaActivada) { 
+                                    AlarmaScheduler.cancelarAlarma(context, c.codigo)
+                                    scheduleManager.desactivarAlarma(c.codigo)
+                                    alarmasActivas -= c.codigo 
+                                } else { 
+                                    AlarmaScheduler.programarAlarma(context, reglas.find { it.circuitoCodigo == c.codigo }, c.codigo)
+                                    scheduleManager.activarAlarma(c.codigo)
+                                    alarmasActivas += c.codigo 
                                 }
-                                IconButton(onClick = {
-                                    if (alarmaActivada) { AlarmaScheduler.cancelarAlarma(context, c.codigo); scheduleManager.desactivarAlarma(c.codigo); alarmasActivas -= c.codigo }
-                                    else { AlarmaScheduler.programarAlarma(context, reglas.find { it.circuitoCodigo == c.codigo }, c.codigo); scheduleManager.activarAlarma(c.codigo); alarmasActivas += c.codigo }
-                                }) { Icon(Icons.Default.Notifications, contentDescription = null, tint = if (alarmaActivada) Color(0xFF2196F3) else Color.Gray) }
-                                IconButton(onClick = {
-                                    favorito = c.codigo; scheduleManager.guardarCircuitoFavorito(c.codigo)
-                                    val intent = Intent(context, CorrienteWidget::class.java).apply { action = AppWidgetManager.ACTION_APPWIDGET_UPDATE; putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))) }
-                                    context.sendBroadcast(intent)
-                                }) { Icon(Icons.Default.Star, contentDescription = null, tint = if (favorito == c.codigo) Color(0xFFFFC107) else Color.Gray) }
+                            }) { 
+                                Icon(Icons.Default.Notifications, contentDescription = "Alarma", tint = if (alarmaActivada) Color(0xFF2196F3) else Color.Gray) 
+                            }
+                            
+                            // Botón Favorito (Estrella)
+                            IconButton(onClick = {
+                                favorito = c.codigo
+                                scheduleManager.guardarCircuitoFavorito(c.codigo)
+                                Toast.makeText(context, "Widget actualizado a ${c.codigo}", Toast.LENGTH_SHORT).show()
+                                val intent = Intent(context, CorrienteWidget::class.java).apply { 
+                                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))) 
+                                }
+                                context.sendBroadcast(intent)
+                            }) { 
+                                Icon(Icons.Default.Star, contentDescription = "Favorito", tint = if (favorito == c.codigo) Color(0xFFFFC107) else Color.Gray) 
+                            }
+
+                            // Botón de Menú (Tres puntos)
+                            Box {
+                                IconButton(onClick = { menuExpandido = true }) {
+                                    Icon(Icons.Default.MoreVert, contentDescription = "Opciones", tint = Color.Gray)
+                                }
+                                DropdownMenu(
+                                    expanded = menuExpandido,
+                                    onDismissRequest = { menuExpandido = false }
+                                ) {
+                                    DropdownMenuItem(
+                                        text = { Text("Editar horario") },
+                                        onClick = { 
+                                            circuitoAEditar = c
+                                            menuExpandido = false 
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Edit, contentDescription = null, tint = Color.Blue) }
+                                    )
+                                    DropdownMenuItem(
+                                        text = { Text("Eliminar circuito") },
+                                        onClick = { 
+                                            circuitos = circuitos.filter { circ -> circ.codigo != c.codigo }
+                                            scheduleManager.guardarCircuitos(circuitos)
+                                            if (favorito == c.codigo && circuitos.isNotEmpty()) {
+                                                favorito = circuitos.first().codigo
+                                                scheduleManager.guardarCircuitoFavorito(favorito)
+                                            }
+                                            menuExpandido = false 
+                                        },
+                                        leadingIcon = { Icon(Icons.Default.Delete, contentDescription = null, tint = Color.Red) }
+                                    )
+                                }
                             }
                         }
                     }
@@ -150,7 +231,11 @@ fun PantallaEnVivo() {
     }
 
     if (mostrarDialogoAgregar) {
-        SeleccionarCircuitoDialog(circuitosActuales = circuitos, onDismiss = { mostrarDialogoAgregar = false }, onAdd = { nuevo -> circuitos = circuitos + nuevo; scheduleManager.guardarCircuitos(circuitos); mostrarDialogoAgregar = false })
+        SeleccionarCircuitoDialog(circuitosActuales = circuitos, onDismiss = { mostrarDialogoAgregar = false }, onAdd = { nuevo -> 
+            circuitos = circuitos + nuevo
+            scheduleManager.guardarCircuitos(circuitos)
+            mostrarDialogoAgregar = false 
+        })
     }
 
     if (circuitoAEditar != null) {
@@ -160,7 +245,10 @@ fun PantallaEnVivo() {
             onSave = { nuevaRegla ->
                 reglas = reglas.filter { it.circuitoCodigo != circuitoAEditar!!.codigo } + nuevaRegla
                 scheduleManager.guardarReglas(reglas)
-                val intent = Intent(context, CorrienteWidget::class.java).apply { action = AppWidgetManager.ACTION_APPWIDGET_UPDATE; putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))) }
+                val intent = Intent(context, CorrienteWidget::class.java).apply { 
+                    action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+                    putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))) 
+                }
                 context.sendBroadcast(intent)
                 circuitoAEditar = null
             }
@@ -189,7 +277,7 @@ fun EditarReglaDialog(circuito: Circuito, reglaActual: ReglaHorario?, onDismiss:
                     DatePickerDialog(context, { _, anio, mes, dia ->
                         TimePickerDialog(context, { _, h, m -> fechaInicio = LocalDateTime.of(anio, mes + 1, dia, h, m) }, fechaInicio.hour, fechaInicio.minute, true).show()
                     }, fechaInicio.year, fechaInicio.monthValue - 1, fechaInicio.dayOfMonth).show()
-                }, modifier = Modifier.fillMaxWidth()) { Text("Inicio del ciclo: ${fechaInicio.format(formato)}") }
+                }, modifier = Modifier.fillMaxWidth()) { Text("Inicio: ${fechaInicio.format(formato)}") }
             }
         },
         confirmButton = {
@@ -255,11 +343,4 @@ fun SeleccionarCircuitoDialog(circuitosActuales: List<Circuito>, onDismiss: () -
 fun AgregarCircuitoManualDialog(onDismiss: () -> Unit, onAdd: (Circuito) -> Unit) {
     var codigo by remember { mutableStateOf("") }; var nombre by remember { mutableStateOf("") }
     AlertDialog(onDismissRequest = onDismiss, title = { Text("Circuito Personalizado") },
-        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = codigo, onValueChange = { codigo = it }, label = { Text("Código") }, singleLine = true); OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre") }, singleLine = true) } },
-        confirmButton = { TextButton(enabled = codigo.isNotBlank() && nombre.isNotBlank(), onClick = {
-            val color = Random.nextInt(0xFF000000.toInt(), 0xFFFFFFFF.toInt())
-            onAdd(Circuito(codigo = codigo.trim().uppercase(), nombre = nombre.trim(), zona = "Personalizado", descripcion = "Añadido por el usuario", color = color))
-        }) { Text("Añadir") } },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-    )
-}
+        text = { Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { OutlinedTextField(value = codigo, onValueChange = { codigo = it }, label = { Text("Código") }, singleLine = true); OutlinedTextField(value = nombre, onValueChange = { nombre = it },
