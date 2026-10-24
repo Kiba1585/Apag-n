@@ -7,7 +7,6 @@ import android.content.Context
 import android.content.Intent
 import android.graphics.Color
 import android.widget.RemoteViews
-import com.tuapp.corriente.data.DatosBloques
 import com.tuapp.corriente.data.DatosIniciales
 import com.tuapp.corriente.data.ScheduleManager
 import com.tuapp.corriente.util.HorarioCalculator
@@ -15,23 +14,19 @@ import java.time.LocalDateTime
 
 class CorrienteWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        for (appWidgetId in appWidgetIds) {
-            actualizarWidget(context, appWidgetManager, appWidgetId)
-        }
+        for (appWidgetId in appWidgetIds) { actualizarWidget(context, appWidgetManager, appWidgetId) }
     }
 
     private fun actualizarWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
         val views = RemoteViews(context.packageName, R.layout.widget_layout)
         val scheduleManager = ScheduleManager(context)
-        
         val codigoFavorito = scheduleManager.obtenerCircuitoFavorito() ?: "A060"
         val circuito = DatosIniciales.circuitos.find { it.codigo == codigoFavorito } ?: DatosIniciales.circuitos[0]
         
-        val todosLosBloques = scheduleManager.cargarBloques() ?: DatosBloques.generarBloques()
-        val bloquesDelCircuito = todosLosBloques.filter { it.circuitoCodigo == circuito.codigo }
+        val reglas = scheduleManager.cargarReglas() ?: emptyList()
+        val regla = reglas.find { it.circuitoCodigo == circuito.codigo }
         
-        val ahora = LocalDateTime.now()
-        val estado = HorarioCalculator.calcular(bloquesDelCircuito, ahora)
+        val estado = HorarioCalculator.calcular(regla, LocalDateTime.now())
         
         val horas = estado.minutosHastaCambio / 60
         val mins = estado.minutosHastaCambio % 60
@@ -39,7 +34,11 @@ class CorrienteWidget : AppWidgetProvider() {
         
         val colorEstado = if (estado.tieneCorriente) Color.parseColor("#4CAF50") else Color.parseColor("#F44336")
         val textoEstado = if (estado.tieneCorriente) "🟢 CON LUZ" else "🔴 SIN LUZ"
-        val textoTiempo = if (estado.tieneCorriente) "Quedan $tiempoTexto" else "Vuelve en $tiempoTexto"
+        val textoTiempo = when {
+            estado.minutosHastaCambio == 0L -> "Sin horario"
+            estado.tieneCorriente -> "Quedan $tiempoTexto"
+            else -> "Vuelve en $tiempoTexto"
+        }
 
         views.setTextViewText(R.id.widget_codigo, "${circuito.codigo} · ${circuito.nombre}")
         views.setTextViewText(R.id.widget_estado, textoEstado)
