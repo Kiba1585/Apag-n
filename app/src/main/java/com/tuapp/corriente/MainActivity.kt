@@ -421,4 +421,119 @@ fun EditarHorarioDialog(
     onSave: (List<BloqueServicio>) -> Unit
 ) {
     val context = LocalContext.current
-    var listaEditada by remember { mutableStateOf(bloquesActu
+    var listaEditada by remember { mutableStateOf(bloquesActuales.toList()) }
+    var mostrarGenerador by remember { mutableStateOf(false) }
+    val formato = DateTimeFormatter.ofPattern("dd/MM HH:mm")
+
+    if (mostrarGenerador) {
+        GeneradorPlantillaDialog(
+            circuito = circuito,
+            onDismiss = { mostrarGenerador = false },
+            onGenerar = { nuevos -> listaEditada = nuevos; mostrarGenerador = false }
+        )
+    }
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Horario: ${circuito.codigo}") },
+        text = {
+            Column {
+                if (listaEditada.isNotEmpty()) {
+                    TextButton(onClick = { listaEditada = emptyList() }, colors = ButtonDefaults.textButtonColors(contentColor = Color.Red)) { Text("Vaciar todos los bloques") }
+                } else {
+                    Text("No hay bloques asignados.", style = MaterialTheme.typography.bodySmall)
+                }
+
+                LazyColumn(Modifier.heightIn(max = 250.dp)) {
+                    items(listaEditada.sortedBy { it.inicio }) { bloque ->
+                        Row(Modifier.fillMaxWidth().padding(vertical = 4.dp), horizontalArrangement = Arrangement.SpaceBetween, verticalAlignment = Alignment.CenterVertically) {
+                            Text("${bloque.inicio.format(formato)} a ${bloque.fin.format(formato)}", style = MaterialTheme.typography.bodyMedium)
+                            IconButton(onClick = { listaEditada = listaEditada - bloque }) { Icon(Icons.Default.Delete, contentDescription = "Borrar", tint = Color.Red) }
+                        }
+                    }
+                }
+                
+                Spacer(Modifier.height(8.dp))
+                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    Button(onClick = { mostrarGenerador = true }, modifier = Modifier.weight(1f), colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.secondary)) { Text("Plantilla rápida") }
+                    Button(
+                        onClick = {
+                            // PEDIR FECHA
+                            val ahora = LocalDateTime.now()
+                            DatePickerDialog(context, { _, anio, mes, dia ->
+                                // PEDIR HORA INICIO
+                                TimePickerDialog(context, { _, hIni, mIni ->
+                                    val inicio = LocalDateTime.of(anio, mes + 1, dia, hIni, mIni)
+                                    // PEDIR HORA FIN
+                                    TimePickerDialog(context, { _, hFin, mFin ->
+                                        // Asumimos que el fin es el mismo día, a menos que la hora sea menor
+                                        var fin = LocalDateTime.of(anio, mes + 1, dia, hFin, mFin)
+                                        if (fin.isBefore(inicio)) fin = fin.plusDays(1)
+                                        
+                                        listaEditada = listaEditada + BloqueServicio(id = System.currentTimeMillis(), circuitoCodigo = circuito.codigo, inicio = inicio, fin = fin)
+                                    }, inicio.plusHours(3).hour, inicio.plusMinutes(0).minute, true).show()
+                                }, ahora.hour, ahora.minute, true).show()
+                            }, ahora.year, ahora.monthValue - 1, ahora.dayOfMonth).show()
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) { Text("Manual") }
+                }
+            }
+        },
+        confirmButton = { TextButton(onClick = { onSave(listaEditada) }) { Text("Guardar") } },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
+
+@Composable
+fun GeneradorPlantillaDialog(
+    circuito: Circuito,
+    onDismiss: () -> Unit,
+    onGenerar: (List<BloqueServicio>) -> Unit
+) {
+    val context = LocalContext.current
+    var horasCorriente by remember { mutableStateOf("3") }
+    var horasApagon by remember { mutableStateOf("12") }
+    var fechaInicio by remember { mutableStateOf(LocalDateTime.now()) }
+    val formato = DateTimeFormatter.ofPattern("dd/MM/yyyy HH:mm")
+
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text("Plantilla Automática") },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                Text("Genera bloques por 30 días seguidos (ej. 3x12):", style = MaterialTheme.typography.bodySmall)
+                OutlinedTextField(value = horasCorriente, onValueChange = { horasCorriente = it }, label = { Text("Horas de corriente") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                OutlinedTextField(value = horasApagon, onValueChange = { horasApagon = it }, label = { Text("Horas de apagón") }, keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number), singleLine = true)
+                
+                Button(onClick = {
+                    DatePickerDialog(context, { _, anio, mes, dia ->
+                        TimePickerDialog(context, { _, h, m ->
+                            fechaInicio = LocalDateTime.of(anio, mes + 1, dia, h, m)
+                        }, fechaInicio.hour, fechaInicio.minute, true).show()
+                    }, fechaInicio.year, fechaInicio.monthValue - 1, fechaInicio.dayOfMonth).show()
+                }, modifier = Modifier.fillMaxWidth()) { 
+                    Text("Inicio: ${fechaInicio.format(formato)}") 
+                }
+            }
+        },
+        confirmButton = {
+            TextButton(onClick = {
+                val duracion = horasCorriente.toLongOrNull() ?: 3L
+                val apagon = horasApagon.toLongOrNull() ?: 12L
+                val nuevosBloques = mutableListOf<BloqueServicio>()
+                
+                var inicioActual = fechaInicio
+                val fechaLimite = fechaInicio.plusDays(30)
+                
+                while (inicioActual.isBefore(fechaLimite)) {
+                    val fin = inicioActual.plusHours(duracion)
+                    nuevosBloques.add(BloqueServicio(id = System.currentTimeMillis() + nuevosBloques.size, circuitoCodigo = circuito.codigo, inicio = inicioActual, fin = fin))
+                    inicioActual = fin.plusHours(apagon)
+                }
+                onGenerar(nuevosBloques)
+            }) { Text("Generar 30 días") }
+        },
+        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
+    )
+}
