@@ -1,8 +1,8 @@
 package com.tuapp.corriente.data
 
 import android.content.Context
-import com.tuapp.corriente.data.entity.BloqueServicio
 import com.tuapp.corriente.data.entity.Circuito
+import com.tuapp.corriente.data.entity.ReglaHorario
 import org.json.JSONArray
 import org.json.JSONObject
 import java.time.LocalDateTime
@@ -10,32 +10,34 @@ import java.time.LocalDateTime
 class ScheduleManager(context: Context) {
     private val prefs = context.getSharedPreferences("corriente_prefs", Context.MODE_PRIVATE)
 
-    fun guardarBloques(bloques: List<BloqueServicio>) {
+    fun guardarReglas(reglas: List<ReglaHorario>) {
         val jsonArray = JSONArray()
-        for (b in bloques) {
+        for (r in reglas) {
             val obj = JSONObject()
-            obj.put("id", b.id)
-            obj.put("circuitoCodigo", b.circuitoCodigo)
-            obj.put("inicio", b.inicio.toString())
-            obj.put("fin", b.fin.toString())
+            obj.put("id", r.id)
+            obj.put("circuitoCodigo", r.circuitoCodigo)
+            obj.put("inicioAncla", r.inicioAncla.toString())
+            obj.put("horasCorriente", r.horasCorriente)
+            obj.put("horasApagon", r.horasApagon)
             jsonArray.put(obj)
         }
-        prefs.edit().putString("bloques_json", jsonArray.toString()).apply()
+        prefs.edit().putString("reglas_json", jsonArray.toString()).apply()
     }
 
-    fun cargarBloques(): List<BloqueServicio>? {
-        val jsonStr = prefs.getString("bloques_json", null) ?: return null
+    fun cargarReglas(): List<ReglaHorario>? {
+        val jsonStr = prefs.getString("reglas_json", null) ?: return null
         return try {
             val jsonArray = JSONArray(jsonStr)
-            val lista = mutableListOf<BloqueServicio>()
+            val lista = mutableListOf<ReglaHorario>()
             for (i in 0 until jsonArray.length()) {
                 val obj = jsonArray.getJSONObject(i)
                 lista.add(
-                    BloqueServicio(
+                    ReglaHorario(
                         id = obj.getLong("id"),
                         circuitoCodigo = obj.getString("circuitoCodigo"),
-                        inicio = LocalDateTime.parse(obj.getString("inicio")),
-                        fin = LocalDateTime.parse(obj.getString("fin"))
+                        inicioAncla = LocalDateTime.parse(obj.getString("inicioAncla")),
+                        horasCorriente = obj.getLong("horasCorriente"),
+                        horasApagon = obj.getLong("horasApagon")
                     )
                 )
             }
@@ -43,14 +45,10 @@ class ScheduleManager(context: Context) {
         } catch (e: Exception) { null }
     }
 
-    fun guardarCircuitoFavorito(codigo: String) {
-        prefs.edit().putString("circuito_favorito", codigo).apply()
-    }
-
-    fun obtenerCircuitoFavorito(): String? {
-        return prefs.getString("circuito_favorito", null)
-    }
-
+    // ... (Las funciones de favoritos, circuitos y alarmas se mantienen igual)
+    fun guardarCircuitoFavorito(codigo: String) { prefs.edit().putString("circuito_favorito", codigo).apply() }
+    fun obtenerCircuitoFavorito(): String? = prefs.getString("circuito_favorito", null)
+    
     fun guardarCircuitos(circuitos: List<Circuito>) {
         val jsonArray = JSONArray()
         for (c in circuitos) {
@@ -103,22 +101,13 @@ class ScheduleManager(context: Context) {
         actuales.add(codigo)
         prefs.edit().putStringSet("alarmas_activas", actuales).apply()
     }
-
     fun desactivarAlarma(codigo: String) {
         val actuales = obtenerAlarmasActivas().toMutableSet()
         actuales.remove(codigo)
         prefs.edit().putStringSet("alarmas_activas", actuales).apply()
     }
+    fun obtenerAlarmasActivas(): Set<String> = prefs.getStringSet("alarmas_activas", emptySet()) ?: emptySet()
 
-    fun obtenerAlarmasActivas(): Set<String> {
-        return prefs.getStringSet("alarmas_activas", emptySet()) ?: emptySet()
-    }
-
-    fun onboardingCompletado(): Boolean {
-        return prefs.getBoolean("onboarding_completado", false)
-    }
-
-    fun marcarOnboardingCompletado() {
-        prefs.edit().putBoolean("onboarding_completado", true).apply()
-    }
+    fun onboardingCompletado(): Boolean = prefs.getBoolean("onboarding_completado", false)
+    fun marcarOnboardingCompletado() { prefs.edit().putBoolean("onboarding_completado", true).apply() }
 }
