@@ -5,7 +5,7 @@ import com.tuapp.corriente.data.entity.BloqueServicio
 import com.tuapp.corriente.data.entity.Circuito
 import org.json.JSONArray
 import org.json.JSONObject
-import java.time.LocalTime
+import java.time.LocalDateTime
 
 class ScheduleManager(context: Context) {
     private val prefs = context.getSharedPreferences("corriente_prefs", Context.MODE_PRIVATE)
@@ -16,8 +16,8 @@ class ScheduleManager(context: Context) {
             val obj = JSONObject()
             obj.put("id", b.id)
             obj.put("circuitoCodigo", b.circuitoCodigo)
-            obj.put("horaInicio", b.horaInicio.toString())
-            obj.put("horaFin", b.horaFin.toString())
+            obj.put("inicio", b.inicio.toString())
+            obj.put("fin", b.fin.toString())
             jsonArray.put(obj)
         }
         prefs.edit().putString("bloques_json", jsonArray.toString()).apply()
@@ -34,8 +34,8 @@ class ScheduleManager(context: Context) {
                     BloqueServicio(
                         id = obj.getLong("id"),
                         circuitoCodigo = obj.getString("circuitoCodigo"),
-                        horaInicio = LocalTime.parse(obj.getString("horaInicio")),
-                        horaFin = LocalTime.parse(obj.getString("horaFin"))
+                        inicio = LocalDateTime.parse(obj.getString("inicio")),
+                        fin = LocalDateTime.parse(obj.getString("fin"))
                     )
                 )
             }
@@ -114,7 +114,6 @@ class ScheduleManager(context: Context) {
         return prefs.getStringSet("alarmas_activas", emptySet()) ?: emptySet()
     }
 
-    // NUEVAS FUNCIONES PARA EL ONBOARDING
     fun onboardingCompletado(): Boolean {
         return prefs.getBoolean("onboarding_completado", false)
     }
