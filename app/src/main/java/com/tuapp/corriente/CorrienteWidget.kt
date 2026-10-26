@@ -10,11 +10,21 @@ import android.widget.RemoteViews
 import com.tuapp.corriente.data.DatosIniciales
 import com.tuapp.corriente.data.ScheduleManager
 import com.tuapp.corriente.util.HorarioCalculator
+import com.tuapp.corriente.util.WidgetUpdateScheduler
 import java.time.LocalDateTime
 
 class CorrienteWidget : AppWidgetProvider() {
     override fun onUpdate(context: Context, appWidgetManager: AppWidgetManager, appWidgetIds: IntArray) {
-        for (appWidgetId in appWidgetIds) { actualizarWidget(context, appWidgetManager, appWidgetId) }
+        for (appWidgetId in appWidgetIds) { 
+            actualizarWidget(context, appWidgetManager, appWidgetId) 
+        }
+        
+        // Programar la próxima actualización exacta
+        val scheduleManager = ScheduleManager(context)
+        val favorito = scheduleManager.obtenerCircuitoFavorito() ?: "A060"
+        val reglas = scheduleManager.cargarReglas() ?: emptyList()
+        val regla = reglas.find { it.circuitoCodigo == favorito }
+        WidgetUpdateScheduler.programarSiguienteActualizacion(context, regla)
     }
 
     private fun actualizarWidget(context: Context, appWidgetManager: AppWidgetManager, appWidgetId: Int) {
