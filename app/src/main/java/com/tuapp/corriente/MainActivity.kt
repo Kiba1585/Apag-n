@@ -81,6 +81,17 @@ fun PantallaEnVivo() {
     var circuitoAEditar by remember { mutableStateOf<Circuito?>(null) }
     var mostrarDialogoAgregar by remember { mutableStateOf(false) }
 
+    // ACTUALIZAR EL WIDGET AL ABRIR LA APP
+    LaunchedEffect(Unit) {
+        val intent = Intent(context, CorrienteWidget::class.java).apply {
+            action = AppWidgetManager.ACTION_APPWIDGET_UPDATE
+            val ids = AppWidgetManager.getInstance(context).getAppWidgetIds(ComponentName(context, CorrienteWidget::class.java))
+            putExtra(AppWidgetManager.EXTRA_APPWIDGET_IDS, ids)
+        }
+        context.sendBroadcast(intent)
+    }
+
+    // RELOJ INTERNO DE LA APP (cada minuto)
     LaunchedEffect(Unit) { 
         while (true) { 
             ahora = LocalDateTime.now()
@@ -389,54 +400,4 @@ fun SeleccionarCircuitoDialog(circuitosActuales: List<Circuito>, onDismiss: () -
                 } else {
                     LazyColumn(Modifier.heightIn(max = 300.dp)) {
                         items(disponibles, key = { it.codigo }) { c ->
-                            Row(Modifier.fillMaxWidth().clickable { onAdd(c) }.padding(vertical = 12.dp, horizontal = 4.dp), verticalAlignment = Alignment.CenterVertically) {
-                                Box(Modifier.size(12.dp).clip(CircleShape).background(Color(c.color)))
-                                Spacer(Modifier.width(12.dp))
-                                Column { 
-                                    Text("${c.codigo} · ${c.nombre}", style = MaterialTheme.typography.titleSmall)
-                                    Text(c.zona, style = MaterialTheme.typography.labelSmall, color = Color.Gray) 
-                                }
-                            }
-                            HorizontalDivider(color = Color.LightGray.copy(alpha = 0.3f))
-                        }
-                    }
-                }
-                Spacer(Modifier.height(16.dp))
-                OutlinedButton(onClick = { mostrarCreacionManual = true }, modifier = Modifier.fillMaxWidth()) { 
-                    Icon(Icons.Default.Add, contentDescription = null)
-                    Spacer(Modifier.width(8.dp))
-                    Text("Crear uno nuevo manualmente") 
-                }
-            }
-        },
-        confirmButton = { TextButton(onClick = onDismiss) { Text("Cerrar") } }
-    )
-}
-
-@OptIn(ExperimentalMaterial3Api::class)
-@Composable
-fun AgregarCircuitoManualDialog(onDismiss: () -> Unit, onAdd: (Circuito) -> Unit) {
-    var codigo by remember { mutableStateOf("") }
-    var nombre by remember { mutableStateOf("") }
-    
-    AlertDialog(
-        onDismissRequest = onDismiss, 
-        title = { Text("Circuito Personalizado") },
-        text = { 
-            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) { 
-                OutlinedTextField(value = codigo, onValueChange = { codigo = it }, label = { Text("Código (ej. A999)") }, singleLine = true)
-                OutlinedTextField(value = nombre, onValueChange = { nombre = it }, label = { Text("Nombre (ej. Mi Casa)") }, singleLine = true) 
-            } 
-        },
-        confirmButton = { 
-            TextButton(
-                enabled = codigo.isNotBlank() && nombre.isNotBlank(), 
-                onClick = {
-                    val color = Random.nextInt(0xFF000000.toInt(), 0xFFFFFFFF.toInt())
-                    onAdd(Circuito(codigo = codigo.trim().uppercase(), nombre = nombre.trim(), zona = "Personalizado", descripcion = "Añadido por el usuario", color = color))
-                }
-            ) { Text("Añadir") } 
-        },
-        dismissButton = { TextButton(onClick = onDismiss) { Text("Cancelar") } }
-    )
-}
+                            Row(Modifier.fillMaxWidth().clickable { onAdd(c) }.padding(vertica
